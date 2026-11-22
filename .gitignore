@@ -1,0 +1,35 @@
+# Dependencies and generated output
+node_modules/
+dist/
+build/
+coverage/
+.vite/
+test-results/
+playwright-report/
+
+# Credentials; retain safe configuration examples
+.env
+.env.*
+!.env.example
+.aws/
+.codex/
+.agents/
+
+# Logs, local database dumps and uploads
+*.log
+*.sql
+*.sqlite
+*.sqlite3
+uploads/
+!uploads/.gitkeep
+
+# Editor and operating system files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*.tsbuildinfo
+.npm/
+
