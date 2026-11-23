@@ -106,6 +106,38 @@ export function defineModels(connection, prefix = '') {
     },
   );
 
+  const PurchaseRequirement = connection.define(
+    'PurchaseRequirement',
+    {
+      id: { type: DataTypes.UUID, primaryKey: true, defaultValue: DataTypes.UUIDV4 },
+      buyerId: { type: DataTypes.UUID, allowNull: false },
+      cropName: { type: DataTypes.STRING(100), allowNull: false },
+      quantity: { type: DataTypes.DECIMAL(12, 3), allowNull: false },
+      unit: { type: DataTypes.ENUM('kg', 'ton', 'piece'), allowNull: false },
+      deliveryAddress: { type: DataTypes.STRING(500), allowNull: false },
+      instructions: { type: DataTypes.STRING(2000), allowNull: true },
+      status: {
+        type: DataTypes.ENUM('active', 'inactive', 'fulfilled'),
+        allowNull: false,
+        defaultValue: 'active',
+      },
+      editCount: {
+        type: DataTypes.TINYINT.UNSIGNED,
+        allowNull: false,
+        defaultValue: 0,
+        validate: { min: 0, max: 2 },
+      },
+      version: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false, defaultValue: 1 },
+    },
+    {
+      ...common,
+      tableName: `${prefix}purchase_requirements`,
+      indexes: [
+        { fields: ['buyer_id', 'status', 'created_at'], name: 'requirement_buyer_status_created' },
+      ],
+    },
+  );
+
   const AuthSession = connection.define(
     'AuthSession',
     {
@@ -126,7 +158,21 @@ export function defineModels(connection, prefix = '') {
   AuthSession.belongsTo(User, { foreignKey: 'userId', as: 'user' });
   User.hasMany(CropListing, { foreignKey: 'farmerId', as: 'cropListings', onDelete: 'CASCADE' });
   CropListing.belongsTo(User, { foreignKey: 'farmerId', as: 'farmer' });
-  return { User, FarmerProfile, BuyerProfile, PhoneVerification, AuthSession, CropListing };
+  User.hasMany(PurchaseRequirement, {
+    foreignKey: 'buyerId',
+    as: 'purchaseRequirements',
+    onDelete: 'CASCADE',
+  });
+  PurchaseRequirement.belongsTo(User, { foreignKey: 'buyerId', as: 'buyer' });
+  return {
+    User,
+    FarmerProfile,
+    BuyerProfile,
+    PhoneVerification,
+    AuthSession,
+    CropListing,
+    PurchaseRequirement,
+  };
 }
 
 export const models = sequelize ? defineModels(sequelize, env.database.tablePrefix) : null;

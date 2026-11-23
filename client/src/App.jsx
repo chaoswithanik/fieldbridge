@@ -13,6 +13,8 @@ import MyListings from './pages/MyListings.jsx';
 import ListingForm from './pages/ListingForm.jsx';
 import Marketplace from './pages/Marketplace.jsx';
 import MarketListing from './pages/MarketListing.jsx';
+import Requirements from './pages/Requirements.jsx';
+import RequirementForm from './pages/RequirementForm.jsx';
 
 export default function App() {
   const { pathname } = useLocation();
@@ -23,6 +25,8 @@ export default function App() {
     const titles = {
       '/about': 'আমাদের সম্পর্কে',
       '/marketplace': 'ফসলের বাজার',
+      '/requirements': 'আমার ক্রয় চাহিদা',
+      '/requirements/new': 'নতুন ক্রয় চাহিদা',
       '/register': 'কৃষক নিবন্ধন',
       '/register/buyer': 'ক্রেতা নিবন্ধন',
       '/admin/buyers': 'ক্রেতার আবেদন পর্যালোচনা',
@@ -31,7 +35,7 @@ export default function App() {
       '/account/listings': 'আমার ফসলের বিজ্ঞাপন',
       '/account/listings/new': 'নতুন ফসলের বিজ্ঞাপন',
     };
-    document.title = `${titles[pathname] || (/^\/account\/listings\/[^/]+\/edit$/.test(pathname) ? 'বিজ্ঞাপন সম্পাদনা' : /^\/marketplace\/[^/]+$/.test(pathname) ? 'ফসলের বিস্তারিত' : 'পাতা পাওয়া যায়নি')} | ফিল্ডব্রিজ`;
+    document.title = `${titles[pathname] || (/^\/account\/listings\/[^/]+\/edit$/.test(pathname) ? 'বিজ্ঞাপন সম্পাদনা' : /^\/requirements\/[^/]+\/edit$/.test(pathname) ? 'ক্রয় চাহিদা সম্পাদনা' : /^\/marketplace\/[^/]+$/.test(pathname) ? 'ফসলের বিস্তারিত' : 'পাতা পাওয়া যায়নি')} | ফিল্ডব্রিজ`;
     if (previousPath.current !== pathname) {
       window.scrollTo({ top: 0, behavior: 'instant' });
       main.current?.focus({ preventScroll: true });
@@ -50,6 +54,9 @@ export default function App() {
           <Route path="/about" element={<About />} />
           <Route path="/marketplace" element={<Marketplace />} />
           <Route path="/marketplace/:id" element={<MarketListing />} />
+          <Route path="/requirements" element={<Requirements />} />
+          <Route path="/requirements/new" element={<RequirementForm />} />
+          <Route path="/requirements/:id/edit" element={<RequirementForm />} />
           <Route path="/register" element={<Register />} />
           <Route path="/register/buyer" element={<BuyerRegister />} />
           <Route path="/admin/buyers" element={<AdminBuyers />} />

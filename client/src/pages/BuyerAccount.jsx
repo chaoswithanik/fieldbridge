@@ -1,5 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
-import { Clock3, BadgeCheck, CircleX, RefreshCw, ShoppingBasket } from 'lucide-react';
+import {
+  Clock3,
+  BadgeCheck,
+  CircleX,
+  RefreshCw,
+  ShoppingBasket,
+  ClipboardList,
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { apiRequest } from '../lib/api.js';
 import { bangla } from '../lib/registration.js';
@@ -111,6 +118,11 @@ export default function BuyerAccount() {
         </div>
       </div>
       <div className="buyer-market-link">
+        {profile.status === 'approved' && (
+          <Link className="button button-primary" to="/requirements">
+            <ClipboardList size={17} aria-hidden="true" /> আমার ক্রয় চাহিদা
+          </Link>
+        )}
         <Link className="button button-primary" to="/marketplace">
           <ShoppingBasket size={17} aria-hidden="true" /> ফসলের বাজার দেখুন
         </Link>

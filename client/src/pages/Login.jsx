@@ -12,7 +12,9 @@ export default function Login() {
   const location = useLocation();
   const from = location.state?.from;
   const destination =
-    typeof from === 'string' && /^\/marketplace(?:[/?]|$)/.test(from) && !from.includes('\\')
+    typeof from === 'string' &&
+    /^\/(?:marketplace|requirements)(?:[/?]|$)/.test(from) &&
+    !from.includes('\\')
       ? from
       : '/account';
   const [form, setForm] = useState({ identifier: '', password: '' });
