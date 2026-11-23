@@ -1,0 +1,272 @@
+.replacement-hint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  padding: 1rem 1.125rem;
+  margin-block: 1rem;
+  border: 1px solid var(--color-inverse-primary);
+  border-radius: 0.75rem;
+  background: var(--color-primary-fixed);
+}
+.replacement-hint > div {
+  flex: 1;
+  min-width: 220px;
+}
+.replacement-hint h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  color: var(--color-primary);
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+.replacement-hint p {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.875rem;
+  margin-top: 0.375rem;
+  color: var(--color-on-surface-variant);
+}
+.replacement-hint .button {
+  flex-shrink: 0;
+}
+.order-original-total {
+  margin-top: 0.5rem;
+}
+.replacement-portion-label {
+  color: var(--color-primary);
+  font-weight: 500;
+}
+.replacement-context {
+  padding: 0.875rem 1rem;
+  background: white;
+  border: 1px solid var(--color-outline-variant);
+  border-radius: 0.75rem;
+  font-size: 0.9375rem;
+  color: var(--color-on-surface-variant);
+}
+.replacement-context p + p {
+  margin-top: 0.375rem;
+  font-size: 0.875rem;
+}
+.replacement-recommendations {
+  margin-top: 1rem;
+}
+.replacement-recommendations h2,
+.replacement-manual > h2 {
+  font-size: 1.1875rem;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+.replacement-recommendation-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+.replacement-recommendation-card {
+  padding: 1rem 1.125rem;
+  background: white;
+  border: 1px solid var(--color-outline-variant);
+  border-radius: 0.75rem;
+  min-width: 0;
+}
+.replacement-recommendation-card h3 {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+.replacement-offer-total {
+  margin-block: 0.625rem 0.375rem;
+  color: var(--color-primary);
+  font-size: 1.125rem;
+  overflow-wrap: anywhere;
+}
+.replacement-offer-total strong {
+  font-weight: 600;
+}
+.replacement-recommendation-card > .field-hint + .field-hint {
+  margin-top: 0.25rem;
+}
+.replacement-offer-members {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--color-on-surface-variant);
+}
+.replacement-offer-members summary {
+  min-height: 44px;
+  align-content: center;
+  cursor: pointer;
+  color: var(--color-primary);
+}
+.replacement-offer-members > div {
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--color-outline-variant);
+  overflow-wrap: anywhere;
+}
+.replacement-offer-members strong {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+.replacement-offer-members p {
+  margin-top: 0.25rem;
+}
+.replacement-empty {
+  padding: 1rem;
+  border: 1px dashed var(--color-outline-variant);
+  border-radius: 0.75rem;
+  color: var(--color-on-surface-variant);
+  font-size: 0.9375rem;
+}
+.replacement-manual {
+  margin-top: 1.5rem;
+  border-top: 1px solid var(--color-outline-variant);
+  padding-top: 1.25rem;
+}
+.replacement-filter-form {
+  display: flex;
+  align-items: end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-block: 1rem;
+}
+.replacement-filter-form label {
+  display: grid;
+  gap: 0.375rem;
+  font-size: 0.875rem;
+  color: var(--color-on-surface-variant);
+  flex: 1;
+  min-width: 140px;
+}
+.replacement-filter-form input,
+.replacement-filter-form select {
+  min-height: 44px;
+  min-width: 0;
+  width: 100%;
+  border: 1px solid var(--color-outline-variant);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font: inherit;
+  background: white;
+  color: var(--color-primary);
+}
+.replacement-filter-form .button {
+  gap: 0.375rem;
+}
+.replacement-filter-form .text-link {
+  min-height: 44px;
+}
+.replacement-selection {
+  padding: 1rem;
+  margin-block: 1rem;
+  background: var(--color-surface-container-low);
+  border: 1px solid var(--color-outline-variant);
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  color: var(--color-on-surface-variant);
+}
+.replacement-selection h3 {
+  color: var(--color-primary);
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+.replacement-selection ul {
+  margin-top: 0.625rem;
+  display: grid;
+  gap: 0.375rem;
+}
+.replacement-selection li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding-left: 0.5rem;
+  border: 1px solid var(--color-outline-variant);
+  border-radius: 0.5rem;
+  background: white;
+}
+.replacement-selection li span {
+  overflow-wrap: anywhere;
+}
+.replacement-selection li button {
+  display: grid;
+  place-items: center;
+  min-width: 44px;
+  min-height: 44px;
+  color: var(--color-primary);
+}
+.replacement-selection > .matching-order-button {
+  width: auto;
+}
+.replacement-manual-card {
+  min-width: 0;
+}
+.replacement-manual-card > .market-crop-card {
+  height: 100%;
+}
+.replacement-manual-card.is-selected .market-crop-card {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 1px var(--color-primary);
+}
+.replacement-farmer-name {
+  color: var(--color-primary);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  margin-top: 0.75rem;
+  overflow-wrap: anywhere;
+}
+.replacement-checkbox {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  min-height: 44px;
+  color: var(--color-primary);
+  font-size: 0.875rem;
+  cursor: pointer;
+  margin-top: 0.5rem;
+}
+.replacement-checkbox input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--color-primary);
+  flex-shrink: 0;
+}
+@media (max-width: 767px) {
+  .replacement-hint {
+    padding: 1rem;
+  }
+  .replacement-hint > div {
+    min-width: 0;
+    flex-basis: 100%;
+  }
+  .replacement-hint .button {
+    width: 100%;
+  }
+  .replacement-recommendation-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .replacement-recommendation-card {
+    padding: 1rem;
+  }
+  .replacement-filter-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .replacement-filter-form label {
+    min-width: 0;
+  }
+  .replacement-filter-form label:last-of-type {
+    grid-column: 1/-1;
+  }
+  .replacement-filter-form input,
+  .replacement-filter-form select {
+    font-size: 1rem;
+  }
+  .replacement-selection > .matching-order-button {
+    width: 100%;
+  }
+}

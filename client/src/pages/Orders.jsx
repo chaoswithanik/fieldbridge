@@ -60,19 +60,24 @@ function OrdersContent() {
                 </div>
                 <dl className="order-list-figures">
                   <div>
-                    <dt>{user.role === 'farmer' ? 'আপনার সরবরাহ' : 'অর্ডারের পরিমাণ'}</dt>
+                    <dt>{user.role === 'farmer' ? 'আপনার সরবরাহ' : 'বর্তমান সরবরাহ'}</dt>
                     <dd>
-                      {formatAmount(order.totalQuantity)} {unitLabels[order.unit]}
+                      {formatAmount(
+                        user.role === 'farmer' ? order.totalQuantity : order.currentQuantity,
+                      )}{' '}
+                      {unitLabels[order.unit]}
                     </dd>
                   </div>
                   <div>
                     <dt>পণ্যমূল্য</dt>
-                    <dd>{formatMoney(order.totalCost)}</dd>
+                    <dd>
+                      {formatMoney(user.role === 'farmer' ? order.totalCost : order.currentCost)}
+                    </dd>
                   </div>
                 </dl>
                 <p className="field-hint">
                   গৃহীত {formatAmount(order.acceptedQuantity)} · উত্তরের অপেক্ষায়{' '}
-                  {formatAmount(order.pendingQuantity)} · প্রত্যাখ্যাত{' '}
+                  {formatAmount(order.pendingQuantity)} · প্রত্যাখ্যানের ইতিহাসে{' '}
                   {formatAmount(order.rejectedQuantity)} {unitLabels[order.unit]}
                 </p>
                 <Link

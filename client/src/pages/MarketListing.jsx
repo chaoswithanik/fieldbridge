@@ -53,15 +53,20 @@ export default function MarketListing() {
   const matchingFrom =
     typeof location.state?.from === 'string' &&
     /^\/requirements\/[a-f0-9-]{36}\/(?:matches|combinations)(?:\?|$)/.test(location.state.from);
+  const replacementFrom =
+    typeof location.state?.from === 'string' &&
+    /^\/orders\/[a-f0-9-]{36}\/replacements(?:\?|$)/.test(location.state.from);
   const collectiveFrom = matchingFrom && location.state.from.includes('/combinations');
-  const backLabel = collectiveFrom
-    ? 'সম্মিলিত সরবরাহে ফিরুন'
-    : matchingFrom
-      ? 'মিলে যাওয়া ফসলে ফিরুন'
-      : 'ফসলের বাজারে ফিরুন';
+  const backLabel = replacementFrom
+    ? 'বিকল্প সরবরাহে ফিরুন'
+    : collectiveFrom
+      ? 'সম্মিলিত সরবরাহে ফিরুন'
+      : matchingFrom
+        ? 'মিলে যাওয়া ফসলে ফিরুন'
+        : 'ফসলের বাজারে ফিরুন';
   const from =
     typeof location.state?.from === 'string' &&
-    (matchingFrom || /^\/marketplace(?:\?|$)/.test(location.state.from))
+    (replacementFrom || matchingFrom || /^\/marketplace(?:\?|$)/.test(location.state.from))
       ? location.state.from
       : '/marketplace';
   const { data, loading, error, reload } = useMarketResource(`marketplace/listings/${id}`);

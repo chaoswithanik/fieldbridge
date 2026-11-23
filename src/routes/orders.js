@@ -3,6 +3,12 @@ import { rateLimit } from 'express-rate-limit';
 import { requireRole } from '../middleware/auth.js';
 import { AppError } from '../lib/errors.js';
 import {
+  replacementRecommendations,
+  replacementListings,
+  previewReplacement,
+  confirmReplacement,
+} from '../services/replacements.js';
+import {
   previewOrder,
   placeOrder,
   readOrder,
@@ -17,12 +23,10 @@ const mutations = rateLimit({
   standardHeaders: 'draft-8',
   legacyHeaders: false,
   handler: (_req, res) =>
-    res
-      .status(429)
-      .json({
-        success: false,
-        message: 'অল্প সময়ে অনেক অনুরোধ করেছেন। কিছুক্ষণ পরে আবার চেষ্টা করুন।',
-      }),
+    res.status(429).json({
+      success: false,
+      message: 'অল্প সময়ে অনেক অনুরোধ করেছেন। কিছুক্ষণ পরে আবার চেষ্টা করুন।',
+    }),
 });
 const buyer = (req, _res, next) => {
   if (req.user.role !== 'buyer')
@@ -53,3 +57,26 @@ ordersRouter.post('/portions/:id/respond', mutations, async (req, res) => {
 ordersRouter.get('/:id', async (req, res) =>
   res.json({ success: true, order: await readOrder(req.user, req.params.id) }),
 );
+ordersRouter.get('/:id/replacements', buyer, async (req, res) =>
+  res.json({
+    success: true,
+    ...(await replacementRecommendations(req.user.id, req.params.id, req.query)),
+  }),
+);
+ordersRouter.get('/:id/replacements/listings', buyer, async (req, res) =>
+  res.json({
+    success: true,
+    ...(await replacementListings(req.user.id, req.params.id, req.query)),
+  }),
+);
+ordersRouter.post('/:id/replacements/quote', buyer, mutations, async (req, res) =>
+  res.json({ success: true, ...(await previewReplacement(req.user.id, req.params.id, req.body)) }),
+);
+ordersRouter.post('/:id/replacements', buyer, mutations, async (req, res) => {
+  const { order, created } = await confirmReplacement(req.user.id, req.params.id, req.body);
+  res.status(created ? 201 : 200).json({
+    success: true,
+    order,
+    message: 'আপনার বেছে নেওয়া বিকল্প সরবরাহ অর্ডারে যুক্ত হয়েছে। মজুত সংরক্ষিত আছে।',
+  });
+});

@@ -8,6 +8,7 @@ const suites = [
   'test/requirements.integration.test.js',
   'test/collective.integration.test.js',
   'test/orders.integration.test.js',
+  'test/replacements.integration.test.js',
 ];
 try {
   if (!sequelize) throw new Error('configuration');
@@ -34,6 +35,7 @@ try {
         'notifications',
         'order_items',
         'order_portions',
+        'order_replacements',
         'orders',
         'auth_sessions',
         'purchase_requirements',

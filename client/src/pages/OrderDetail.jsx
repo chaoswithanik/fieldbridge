@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { ClipboardCheck, LoaderCircle, RefreshCw, MapPin, Phone } from 'lucide-react';
 import OrderAccess from '../components/OrderAccess.jsx';
+import ReplacementSuggestions from '../components/ReplacementSuggestions.jsx';
 import { useApiResource } from '../lib/resource.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { apiRequest } from '../lib/api.js';
@@ -160,7 +161,14 @@ function OrderContent() {
             {orderDate(order.createdAt)} · অর্ডার #{order.id.slice(0, 8)}
           </p>
         </div>
-        <button className="button button-secondary" disabled={busy} onClick={reload}>
+        <button
+          className="button button-secondary"
+          disabled={busy}
+          onClick={() => {
+            setMessage('');
+            reload();
+          }}
+        >
           <RefreshCw size={16} aria-hidden="true" /> তথ্য হালনাগাদ করুন
         </button>
       </div>
@@ -173,14 +181,15 @@ function OrderContent() {
         <span className={`order-badge order-${order.status}`}>{orderLabels[order.status]}</span>
         <dl className="combination-figures">
           <div>
-            <dt>{farmer ? 'আপনার সরবরাহ' : 'অর্ডারের মোট পরিমাণ'}</dt>
+            <dt>{farmer ? 'আপনার সরবরাহ' : 'বর্তমান সরবরাহ'}</dt>
             <dd>
-              {formatAmount(order.totalQuantity)} <span>{unit}</span>
+              {formatAmount(farmer ? order.totalQuantity : order.currentQuantity)}{' '}
+              <span>{unit}</span>
             </dd>
           </div>
           <div>
-            <dt>{farmer ? 'আপনার পণ্যমূল্য' : 'মোট পণ্যমূল্য'}</dt>
-            <dd>{formatMoney(order.totalCost)}</dd>
+            <dt>{farmer ? 'আপনার পণ্যমূল্য' : 'বর্তমান পণ্যমূল্য'}</dt>
+            <dd>{formatMoney(farmer ? order.totalCost : order.currentCost)}</dd>
           </div>
           <div>
             <dt>গ্রহণ করেছেন</dt>
@@ -196,7 +205,7 @@ function OrderContent() {
           </div>
         </dl>
         <p className="field-hint">
-          প্রত্যাখ্যাত {formatAmount(order.rejectedQuantity)} {unit}
+          প্রত্যাখ্যানের ইতিহাসে {formatAmount(order.rejectedQuantity)} {unit}
           {!farmer && (
             <>
               {' '}
@@ -204,6 +213,12 @@ function OrderContent() {
             </>
           )}
         </p>
+        {!farmer && (
+          <p className="field-hint order-original-total">
+            অর্ডার শুরুর পরিমাণ {formatAmount(order.totalQuantity)} {unit} · শুরুর পণ্যমূল্য{' '}
+            {formatMoney(order.totalCost)}। বর্তমান সরবরাহ ও মূল্যে পুরোনো প্রত্যাখ্যাত অংশ নেই।
+          </p>
+        )}
         {!farmer && Number(order.totalQuantity) !== Number(order.requestedQuantity) && (
           <p className="listing-info">
             মূল চাহিদা {formatAmount(order.requestedQuantity)} {unit}; অর্ডারটি{' '}
@@ -230,12 +245,18 @@ function OrderContent() {
           </p>
         )}
       </section>
+      {!farmer && Number(order.replacementNeededQuantity) > 0 && (
+        <ReplacementSuggestions key={order.version} order={order} />
+      )}
       <div className="order-portions">
         {order.portions.map((portion) => (
           <article className="order-portion" key={portion.id}>
             <div className="order-list-top">
               <div>
                 <h2>{farmer ? 'আপনার সরবরাহের বিবরণ' : portion.farmer.fullName}</h2>
+                {portion.isReplacement && (
+                  <p className="field-hint replacement-portion-label">বিকল্প কৃষকের অংশ</p>
+                )}
                 {!farmer && (
                   <a className="combination-phone" href={`tel:+88${portion.farmer.phone}`}>
                     <Phone size={15} aria-hidden="true" />
@@ -308,12 +329,6 @@ function OrderContent() {
         থাকে। প্রত্যাখ্যান করলে সংশ্লিষ্ট মজুতের সংরক্ষণ ছেড়ে দেওয়া হয়। পণ্যমূল্যে পরিবহন খরচ
         অন্তর্ভুক্ত নয়।
       </p>
-      {order.rejectedQuantity !== '0.000' && !farmer && (
-        <p className="listing-info">
-          প্রত্যাখ্যাত অংশের পরিমাণ উপরে দেখানো আছে। বিকল্প কৃষক যুক্ত করার সুবিধা পরবর্তী ধাপে
-          আসবে।
-        </p>
-      )}
       {action && (
         <ResponseDialog
           action={action}

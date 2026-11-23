@@ -13,6 +13,7 @@ import {
   uuidPattern,
 } from '../lib/order-validation.js';
 import { findOwnRequirement } from './requirements.js';
+import { summarizePortions } from '../lib/order-summary.js';
 const quantity = (value) => scaledDecimal(value, 3);
 const cost = (amount, price) => (quantity(amount) * scaledDecimal(price, 2) + 500n) / 1000n;
 const stale = () =>
@@ -22,11 +23,11 @@ const stale = () =>
   );
 const signature = (body) =>
   createHmac('sha256', env.orders.quoteSecret).update(body).digest('base64url');
-function signQuote(selection) {
+export function signQuote(selection) {
   const body = Buffer.from(JSON.stringify(selection)).toString('base64url');
   return `${body}.${signature(body)}`;
 }
-function openQuote(token, buyerId) {
+export function openQuote(token, buyerId) {
   const [body, signed, extra] = token.split('.');
   if (
     !body ||
@@ -44,9 +45,9 @@ function openQuote(token, buyerId) {
     throw stale();
   }
 }
-export async function assertApprovedOrderBuyer(buyerId, transaction) {
+export async function assertApprovedOrderBuyer(buyerId, transaction, lock = 'UPDATE') {
   const profile = await models.BuyerProfile.findByPk(buyerId, {
-    ...(transaction ? { transaction, lock: transaction.LOCK.UPDATE } : {}),
+    ...(transaction ? { transaction, lock: transaction.LOCK[lock] } : {}),
   });
   if (!profile || profile.status !== 'approved')
     throw new AppError(403, 'অর্ডার পরিচালনার জন্য ক্রেতার অনুমোদন প্রয়োজন।');
@@ -119,19 +120,7 @@ async function selectionPreview(buyerId, input, transaction) {
       farmerId: row.farmerId,
       quantity: decimalString(quantity(amount), 3),
       subtotal: decimalString(cost(amount, row.pricePerUnit), 2),
-      snapshot: {
-        cropName: row.cropName,
-        unit: row.unit,
-        pricePerUnit: row.pricePerUnit,
-        harvestDate: row.harvestDate,
-        availableDate: row.availableDate,
-        district: row.district,
-        upazila: row.upazila,
-        farmAddress: row.farmAddress,
-        farmerName: farmer.fullName,
-        farmerPhone: farmer.phone,
-        farmName: farmer.farmerProfile.farmName,
-      },
+      snapshot: orderItemSnapshot(row, farmer),
     };
   });
   const buyer = await models.User.findByPk(buyerId, {
@@ -173,7 +162,7 @@ async function selectionPreview(buyerId, input, transaction) {
     token: signQuote(payload),
   };
 }
-function publicPreview(preview) {
+export function publicPreview(preview) {
   return {
     mode: preview.mode,
     ...preview.snapshot,
@@ -181,6 +170,85 @@ function publicPreview(preview) {
     totalCost: preview.totalCost,
     items: preview.items.map(({ farmerId, listingVersion, ...item }) => item),
   };
+}
+export function orderItemSnapshot(row, farmer) {
+  return {
+    cropName: row.cropName,
+    unit: row.unit,
+    pricePerUnit: row.pricePerUnit,
+    harvestDate: row.harvestDate,
+    availableDate: row.availableDate,
+    district: row.district,
+    upazila: row.upazila,
+    farmAddress: row.farmAddress,
+    farmerName: farmer.fullName,
+    farmerPhone: farmer.phone,
+    farmName: farmer.farmerProfile.farmName,
+  };
+}
+export async function addOrderPortions(order, items, transaction, replacementId = null) {
+  const groups = new Map();
+  for (const item of items) {
+    if (!groups.has(item.farmerId)) groups.set(item.farmerId, []);
+    groups.get(item.farmerId).push(item);
+  }
+  for (const [farmerId, members] of groups) {
+    const first = members[0].snapshot;
+    const portion = await models.OrderPortion.create(
+      {
+        orderId: order.id,
+        farmerId,
+        replacementId,
+        snapshot: {
+          fullName: first.farmerName,
+          phone: first.farmerPhone,
+          farmName: first.farmName,
+        },
+        quantity: decimalString(
+          members.reduce((sum, item) => sum + quantity(item.quantity), 0n),
+          3,
+        ),
+        totalCost: decimalString(
+          members.reduce((sum, item) => sum + scaledDecimal(item.subtotal, 2), 0n),
+          2,
+        ),
+      },
+      { transaction },
+    );
+    await models.OrderItem.bulkCreate(
+      members.map((item) => ({
+        portionId: portion.id,
+        listingId: item.listingId,
+        quantity: item.quantity,
+        subtotal: item.subtotal,
+        snapshot: item.snapshot,
+      })),
+      { transaction },
+    );
+    await models.Notification.create(
+      {
+        recipientId: farmerId,
+        orderId: order.id,
+        title: replacementId ? 'বিকল্প সরবরাহের নতুন অর্ডার' : 'নতুন ফসলের অর্ডার',
+        message: `${order.snapshot.cropName} সরবরাহের একটি অর্ডার এসেছে। নিজের অংশ দেখে গ্রহণ বা প্রত্যাখ্যান করুন। উত্তর দেওয়ার সময়সীমা নেই।`,
+      },
+      { transaction },
+    );
+  }
+}
+export async function reserveOrderItems(rows, items, transaction) {
+  const amounts = new Map(items.map((item) => [item.listingId, quantity(item.quantity)]));
+  for (const row of rows) {
+    const held = amounts.get(row.id);
+    await row.update(
+      {
+        quantity: decimalString(quantity(row.quantity) - held, 3),
+        reservedQuantity: decimalString(quantity(row.reservedQuantity) + held, 3),
+        version: row.version + 1,
+      },
+      { transaction },
+    );
+  }
 }
 export async function previewOrder(buyerId, input) {
   return sequelize.transaction(
@@ -192,29 +260,7 @@ export async function previewOrder(buyerId, input) {
     },
   );
 }
-function orderSummary(portions, requested) {
-  const sums = { accepted: 0n, pending: 0n, rejected: 0n };
-  for (const portion of portions) sums[portion.status] += quantity(portion.quantity);
-  const status =
-    sums.pending > 0n
-      ? 'awaiting_response'
-      : sums.accepted === 0n
-        ? 'rejected'
-        : sums.rejected > 0n
-          ? 'partially_accepted'
-          : 'accepted';
-  return {
-    status,
-    acceptedQuantity: decimalString(sums.accepted, 3),
-    pendingQuantity: decimalString(sums.pending, 3),
-    rejectedQuantity: decimalString(sums.rejected, 3),
-    unfulfilledQuantity: decimalString(
-      quantity(requested) > sums.accepted ? quantity(requested) - sums.accepted : 0n,
-      3,
-    ),
-  };
-}
-async function fetchOrder(user, id, transaction) {
+export async function fetchOrder(user, id, transaction) {
   if (!uuidPattern.test(id || '')) throw new AppError(404, 'অর্ডারটি খুঁজে পাওয়া যায়নি।');
   const order = await models.Order.findOne({
     where: { id, ...(user.role === 'buyer' ? { buyerId: user.id } : {}) },
@@ -227,6 +273,7 @@ async function fetchOrder(user, id, transaction) {
       'totalCost',
       'createdAt',
       'updatedAt',
+      'version',
     ],
     include: [
       {
@@ -242,6 +289,7 @@ async function fetchOrder(user, id, transaction) {
           'snapshot',
           'version',
           'respondedAt',
+          'replacementId',
           'createdAt',
         ],
         include: [
@@ -267,6 +315,7 @@ async function fetchOrder(user, id, transaction) {
   if (!order) throw new AppError(404, 'অর্ডারটি খুঁজে পাওয়া যায়নি।');
   const portions = order.portions.map((portion) => ({
     id: portion.id,
+    isReplacement: Boolean(portion.replacementId),
     status: portion.status,
     quantity: portion.quantity,
     totalCost: portion.totalCost,
@@ -291,7 +340,7 @@ async function fetchOrder(user, id, transaction) {
   const { requestedQuantity, ...farmerSnapshot } = order.snapshot;
   return {
     id: order.id,
-    ...(own ? {} : { requirementId: order.requirementId }),
+    ...(own ? {} : { requirementId: order.requirementId, version: order.version }),
     mode: order.mode,
     ...(own ? farmerSnapshot : order.snapshot),
     totalQuantity: amount,
@@ -301,7 +350,11 @@ async function fetchOrder(user, id, transaction) {
           2,
         )
       : order.totalCost,
-    ...orderSummary(portions, own ? amount : requestedQuantity),
+    ...summarizePortions(
+      portions,
+      own ? amount : requestedQuantity,
+      own ? amount : order.totalQuantity,
+    ),
     portions,
     createdAt: order.createdAt,
     updatedAt: order.updatedAt,
@@ -357,6 +410,7 @@ export async function placeOrder(buyerId, input) {
         };
       }
       const quote = openQuote(quoteToken, buyerId);
+      if (quote.purpose) throw stale();
       const preview = await selectionPreview(
         buyerId,
         { requirementId: quote.requirementId, listingIds: quote.items.map((item) => item.id) },
@@ -376,65 +430,8 @@ export async function placeOrder(buyerId, input) {
         },
         { transaction },
       );
-      const groups = new Map();
-      for (const item of preview.items) {
-        if (!groups.has(item.farmerId)) groups.set(item.farmerId, []);
-        groups.get(item.farmerId).push(item);
-      }
-      for (const [farmerId, items] of groups) {
-        const first = items[0].snapshot;
-        const portion = await models.OrderPortion.create(
-          {
-            orderId: order.id,
-            farmerId,
-            snapshot: {
-              fullName: first.farmerName,
-              phone: first.farmerPhone,
-              farmName: first.farmName,
-            },
-            quantity: decimalString(
-              items.reduce((sum, item) => sum + quantity(item.quantity), 0n),
-              3,
-            ),
-            totalCost: decimalString(
-              items.reduce((sum, item) => sum + scaledDecimal(item.subtotal, 2), 0n),
-              2,
-            ),
-          },
-          { transaction },
-        );
-        await models.OrderItem.bulkCreate(
-          items.map((item) => ({
-            portionId: portion.id,
-            listingId: item.listingId,
-            quantity: item.quantity,
-            subtotal: item.subtotal,
-            snapshot: item.snapshot,
-          })),
-          { transaction },
-        );
-        await models.Notification.create(
-          {
-            recipientId: farmerId,
-            orderId: order.id,
-            title: 'নতুন ফসলের অর্ডার',
-            message: `${preview.snapshot.cropName} সরবরাহের একটি অর্ডার এসেছে। নিজের অংশ দেখে গ্রহণ বা প্রত্যাখ্যান করুন। উত্তর দেওয়ার সময়সীমা নেই।`,
-          },
-          { transaction },
-        );
-      }
-      for (let i = 0; i < preview.rows.length; i++) {
-        const row = preview.rows[i],
-          reserved = quantity(preview.items[i].quantity);
-        await row.update(
-          {
-            quantity: decimalString(quantity(row.quantity) - reserved, 3),
-            reservedQuantity: decimalString(quantity(row.reservedQuantity) + reserved, 3),
-            version: row.version + 1,
-          },
-          { transaction },
-        );
-      }
+      await addOrderPortions(order, preview.items, transaction);
+      await reserveOrderItems(preview.rows, preview.items, transaction);
       await models.Notification.create(
         {
           recipientId: buyerId,
@@ -512,12 +509,16 @@ export async function respondToOrder(farmerId, portionId, input) {
         { status: decision, respondedAt: new Date(), version: portion.version + 1 },
         { transaction },
       );
-      await order.update({ updatedAt: new Date() }, { transaction });
+      await order.update({ version: order.version + 1, updatedAt: new Date() }, { transaction });
       const portions = await models.OrderPortion.findAll({
         where: { orderId: order.id },
         transaction,
       });
-      const summary = orderSummary(portions, order.snapshot.requestedQuantity);
+      const summary = summarizePortions(
+        portions,
+        order.snapshot.requestedQuantity,
+        order.totalQuantity,
+      );
       const unit = { kg: 'কেজি', ton: 'মেট্রিক টন', piece: 'পিস' }[order.snapshot.unit];
       const amount = (value) =>
         new Intl.NumberFormat('bn-BD', { maximumFractionDigits: 3 }).format(Number(value));
@@ -529,7 +530,7 @@ export async function respondToOrder(farmerId, portionId, input) {
             decision === 'accepted'
               ? 'কৃষক অর্ডারের অংশ গ্রহণ করেছেন'
               : 'কৃষক অর্ডারের অংশ প্রত্যাখ্যান করেছেন',
-          message: `${order.snapshot.cropName}: গৃহীত ${amount(summary.acceptedQuantity)} ${unit}, উত্তরের অপেক্ষায় ${amount(summary.pendingQuantity)} ${unit}, এখনো প্রয়োজন ${amount(summary.unfulfilledQuantity)} ${unit}।`,
+          message: `${order.snapshot.cropName}: গৃহীত ${amount(summary.acceptedQuantity)} ${unit}, উত্তরের অপেক্ষায় ${amount(summary.pendingQuantity)} ${unit}, এখনো প্রয়োজন ${amount(summary.unfulfilledQuantity)} ${unit}।${decision === 'rejected' ? ' অর্ডার খুলে বিকল্প সরবরাহের পরামর্শ দেখুন ও নিজে বেছে নিন।' : ''}`,
         },
         { transaction },
       );

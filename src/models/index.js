@@ -143,6 +143,7 @@ export function defineModels(connection, prefix = '') {
     'Order',
     {
       id: { type: DataTypes.UUID, primaryKey: true, defaultValue: DataTypes.UUIDV4 },
+      version: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false, defaultValue: 1 },
       buyerId: { type: DataTypes.UUID, allowNull: false },
       requirementId: { type: DataTypes.UUID, allowNull: true },
       requestId: { type: DataTypes.UUID, allowNull: false },
@@ -162,6 +163,7 @@ export function defineModels(connection, prefix = '') {
     'OrderPortion',
     {
       id: { type: DataTypes.UUID, primaryKey: true, defaultValue: DataTypes.UUIDV4 },
+      replacementId: { type: DataTypes.UUID, allowNull: true },
       orderId: { type: DataTypes.UUID, allowNull: false },
       farmerId: { type: DataTypes.UUID, allowNull: false },
       status: {
@@ -202,6 +204,18 @@ export function defineModels(connection, prefix = '') {
     { ...common, tableName: `${prefix}notifications` },
   );
 
+  const OrderReplacement = connection.define(
+    'OrderReplacement',
+    {
+      id: { type: DataTypes.UUID, primaryKey: true, defaultValue: DataTypes.UUIDV4 },
+      orderId: { type: DataTypes.UUID, allowNull: false },
+      buyerId: { type: DataTypes.UUID, allowNull: false },
+      requestId: { type: DataTypes.UUID, allowNull: false },
+      requestHash: { type: DataTypes.STRING(64), allowNull: false },
+    },
+    { ...common, tableName: `${prefix}order_replacements` },
+  );
+
   const AuthSession = connection.define(
     'AuthSession',
     {
@@ -237,6 +251,9 @@ export function defineModels(connection, prefix = '') {
   OrderItem.belongsTo(OrderPortion, { foreignKey: 'portionId' });
   OrderItem.belongsTo(CropListing, { foreignKey: 'listingId', onDelete: 'SET NULL' });
   Notification.belongsTo(User, { foreignKey: 'recipientId', onDelete: 'CASCADE' });
+  OrderReplacement.belongsTo(Order, { foreignKey: 'orderId' });
+  OrderReplacement.belongsTo(User, { foreignKey: 'buyerId' });
+  OrderPortion.belongsTo(OrderReplacement, { foreignKey: 'replacementId' });
   Notification.belongsTo(Order, { foreignKey: 'orderId' });
   return {
     User,
@@ -250,6 +267,7 @@ export function defineModels(connection, prefix = '') {
     OrderPortion,
     OrderItem,
     Notification,
+    OrderReplacement,
   };
 }
 

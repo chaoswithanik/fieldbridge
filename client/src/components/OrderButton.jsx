@@ -5,7 +5,7 @@ import { apiRequest } from '../lib/api.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { formatAmount, unitLabels } from '../lib/listings.js';
 import { formatMoney, notificationsChanged } from '../lib/orders.js';
-function OrderPreview({ requirementId, listingIds, onClose }) {
+function OrderPreview({ requirementId, replacementOrderId, listingIds, onClose }) {
   const dialog = useRef(null),
     navigate = useNavigate(),
     { refresh } = useAuth();
@@ -28,10 +28,16 @@ function OrderPreview({ requirementId, listingIds, onClose }) {
     setError('');
     setQuote(null);
     setStale(false);
-    apiRequest('orders/quote', {
-      method: 'POST',
-      body: JSON.stringify({ requirementId, listingIds: ids.split(':') }),
-    })
+    apiRequest(
+      replacementOrderId ? `orders/${replacementOrderId}/replacements/quote` : 'orders/quote',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          ...(replacementOrderId ? {} : { requirementId }),
+          listingIds: ids.split(':'),
+        }),
+      },
+    )
       .then((result) => {
         if (active) setQuote(result);
       })
@@ -47,16 +53,19 @@ function OrderPreview({ requirementId, listingIds, onClose }) {
     return () => {
       active = false;
     };
-  }, [requirementId, ids, revision, refresh]);
+  }, [requirementId, replacementOrderId, ids, revision, refresh]);
   async function confirm() {
     if (!quote || busy || stale) return;
     setBusy(true);
     setError('');
     try {
-      const result = await apiRequest('orders', {
-        method: 'POST',
-        body: JSON.stringify({ quoteToken: quote.quoteToken, requestId }),
-      });
+      const result = await apiRequest(
+        replacementOrderId ? `orders/${replacementOrderId}/replacements` : 'orders',
+        {
+          method: 'POST',
+          body: JSON.stringify({ quoteToken: quote.quoteToken, requestId }),
+        },
+      );
       notificationsChanged();
       navigate(`/orders/${result.order.id}`, { state: { orderMessage: result.message } });
     } catch (failure) {
@@ -79,7 +88,9 @@ function OrderPreview({ requirementId, listingIds, onClose }) {
         if (!busy) onClose();
       }}
     >
-      <h2 id="order-preview-title">অর্ডার নিশ্চিত করার আগে</h2>
+      <h2 id="order-preview-title">
+        {replacementOrderId ? 'বিকল্প সরবরাহ যুক্ত করার আগে' : 'অর্ডার নিশ্চিত করার আগে'}
+      </h2>
       <p>সর্বশেষ দাম ও পরিমাণ দেখে নিশ্চিত করুন। এখনো কোনো মজুত সংরক্ষণ হয়নি।</p>
       {loading && (
         <p role="status" className="order-loading">
@@ -101,17 +112,24 @@ function OrderPreview({ requirementId, listingIds, onClose }) {
               </strong>
             </div>
             <div>
-              <span>মোট পণ্যমূল্য</span>
+              <span>{replacementOrderId ? 'নতুন সরবরাহের পণ্যমূল্য' : 'মোট পণ্যমূল্য'}</span>
               <strong>{formatMoney(preview.totalCost)}</strong>
             </div>
           </div>
           {Number(preview.totalQuantity) !== Number(preview.requestedQuantity) && (
             <p className="listing-info">
-              আপনার চাহিদা {formatAmount(preview.requestedQuantity)} {unit}। এই অর্ডারটি{' '}
+              {replacementOrderId ? 'অর্ডারে বাকি' : 'আপনার চাহিদা'}{' '}
+              {formatAmount(preview.requestedQuantity)} {unit}। এই সরবরাহটি{' '}
               {Number(preview.totalQuantity) < Number(preview.requestedQuantity)
                 ? 'আংশিক পরিমাণের'
                 : 'চাহিদার চেয়ে অতিরিক্ত পরিমাণের'}
               ।
+            </p>
+          )}
+          {replacementOrderId && (
+            <p className="listing-info">
+              যুক্ত করার পরে বর্তমান সরবরাহ {formatAmount(preview.afterQuantity)} {unit} · বর্তমান
+              পণ্যমূল্য {formatMoney(preview.afterCost)}। পুরোনো প্রত্যাখ্যাত অংশের মূল্য এতে নেই।
             </p>
           )}
           <div className="order-preview-items">
@@ -160,30 +178,42 @@ function OrderPreview({ requirementId, listingIds, onClose }) {
             onClick={confirm}
             disabled={loading || busy || !quote}
           >
-            {busy && <LoaderCircle className="spin" size={16} aria-hidden="true" />}অর্ডার নিশ্চিত
-            করুন
+            {busy && <LoaderCircle className="spin" size={16} aria-hidden="true" />}
+            {replacementOrderId ? 'বিকল্প সরবরাহ নিশ্চিত করুন' : 'অর্ডার নিশ্চিত করুন'}
           </button>
         )}
       </div>
     </dialog>
   );
 }
-export default function OrderButton({ requirement, listingIds, collective = false }) {
+export default function OrderButton({
+  requirement,
+  listingIds,
+  collective = false,
+  replacementOrderId,
+  label,
+  disabled = false,
+}) {
   const [open, setOpen] = useState(false);
   return (
     <>
       <button
         type="button"
         className="button button-primary matching-order-button"
-        disabled={requirement.status !== 'active'}
+        disabled={
+          disabled ||
+          !listingIds.length ||
+          (!replacementOrderId && requirement?.status !== 'active')
+        }
         onClick={() => setOpen(true)}
       >
         <ShoppingBasket size={17} aria-hidden="true" />
-        {collective ? 'এই সমন্বয় থেকে অর্ডার দিন' : 'এই ফসল থেকে অর্ডার দিন'}
+        {label || (collective ? 'এই সমন্বয় থেকে অর্ডার দিন' : 'এই ফসল থেকে অর্ডার দিন')}
       </button>
       {open && (
         <OrderPreview
-          requirementId={requirement.id}
+          requirementId={requirement?.id}
+          replacementOrderId={replacementOrderId}
           listingIds={listingIds}
           onClose={() => setOpen(false)}
         />
