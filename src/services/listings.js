@@ -8,6 +8,7 @@ import {
   retainedPhotos,
 } from '../lib/listing-validation.js';
 import { saveListingPhotos, deleteListingPhotos } from './listing-photos.js';
+import { scaledDecimal, decimalString } from '../lib/collective-matching.js';
 
 const inputFields = [
   'cropName',
@@ -39,6 +40,7 @@ export function ownListing(row) {
     id: row.id,
     cropName: row.cropName,
     quantity: row.quantity,
+    reservedQuantity: row.reservedQuantity,
     unit: row.unit,
     pricePerUnit: row.pricePerUnit,
     harvestDate: row.harvestDate,
@@ -143,7 +145,9 @@ export async function editListing(farmerId, id, input, files = []) {
   const version = listingVersion(input.version);
   const current = await findOwnListing(farmerId, id);
   checkVersion(current, version);
-  const values = validateListing(input, { soldOut: current.status === 'sold_out' });
+  const values = validateListing(input, {
+    soldOut: current.status === 'sold_out' || scaledDecimal(current.reservedQuantity, 3) > 0n,
+  });
   const kept = retainedPhotos(input.retainedPhotos);
   if (kept.some((name) => !current.photoFilenames.includes(name)))
     throw new AppError(422, 'নিজের বিজ্ঞাপনের ছবিই ব্যবহার করুন।');
@@ -154,6 +158,17 @@ export async function editListing(farmerId, id, input, files = []) {
     result = await sequelize.transaction(async (transaction) => {
       const row = await findOwnListing(farmerId, id, transaction);
       checkVersion(row, version);
+      const held = scaledDecimal(row.reservedQuantity, 3);
+      if (held > 0n && (values.cropName !== row.cropName || values.unit !== row.unit))
+        throw new AppError(
+          409,
+          'অর্ডারের জন্য মজুত সংরক্ষিত আছে। ফসলের নাম ও একক এখন বদলানো যাবে না।',
+        );
+      if (scaledDecimal(values.quantity, 3) + held > 999999999999n)
+        throw new AppError(
+          422,
+          `সংরক্ষিত মজুতসহ মোট পরিমাণ সীমা ছাড়িয়েছে। উন্মুক্ত মজুত সর্বোচ্চ ${decimalString(999999999999n - held, 3)} দিন।`,
+        );
       await row.update(
         { ...values, photoFilenames: [...kept, ...added], version: row.version + 1 },
         { transaction },
@@ -170,11 +185,17 @@ export async function editListing(farmerId, id, input, files = []) {
 
 export async function changeListingStatus(farmerId, id, input) {
   checkFields(input, ['status', 'version']);
-  if (!listingStatuses.includes(input.status)) throw new AppError(422, 'বিজ্ঞাপনের অবস্থা সঠিক নয়।');
+  if (!listingStatuses.includes(input.status))
+    throw new AppError(422, 'বিজ্ঞাপনের অবস্থা সঠিক নয়।');
   const version = listingVersion(input.version);
   return sequelize.transaction(async (transaction) => {
     const row = await findOwnListing(farmerId, id, transaction);
     checkVersion(row, version);
+    if (input.status === 'sold_out' && scaledDecimal(row.reservedQuantity, 3) > 0n)
+      throw new AppError(
+        409,
+        'অর্ডারের জন্য মজুত সংরক্ষিত আছে। এখন বিক্রি শেষ চিহ্নিত করা যাবে না।',
+      );
     if (input.status === 'active' && Number(row.quantity) <= 0)
       throw new AppError(422, 'চালু করার আগে সম্পাদনা করে মজুতের পরিমাণ শূন্যের বেশি দিন।', {
         quantity: 'বিজ্ঞাপন সম্পাদনা করে নতুন মজুতের পরিমাণ লিখুন।',
@@ -197,6 +218,8 @@ export async function removeListing(farmerId, id, input) {
   const photos = await sequelize.transaction(async (transaction) => {
     const row = await findOwnListing(farmerId, id, transaction);
     checkVersion(row, version);
+    if (scaledDecimal(row.reservedQuantity, 3) > 0n)
+      throw new AppError(409, 'অর্ডারের জন্য মজুত সংরক্ষিত আছে। বিজ্ঞাপনটি এখন মুছে ফেলা যাবে না।');
     const filenames = row.photoFilenames;
     await row.destroy({ transaction });
     return filenames;

@@ -83,6 +83,7 @@ export function defineModels(connection, prefix = '') {
       farmerId: { type: DataTypes.UUID, allowNull: false },
       cropName: { type: DataTypes.STRING(100), allowNull: false },
       quantity: { type: DataTypes.DECIMAL(12, 3), allowNull: false },
+      reservedQuantity: { type: DataTypes.DECIMAL(12, 3), allowNull: false, defaultValue: 0 },
       unit: { type: DataTypes.ENUM('kg', 'ton', 'piece'), allowNull: false },
       pricePerUnit: { type: DataTypes.DECIMAL(12, 2), allowNull: false },
       harvestDate: { type: DataTypes.DATEONLY, allowNull: false },
@@ -138,6 +139,69 @@ export function defineModels(connection, prefix = '') {
     },
   );
 
+  const Order = connection.define(
+    'Order',
+    {
+      id: { type: DataTypes.UUID, primaryKey: true, defaultValue: DataTypes.UUIDV4 },
+      buyerId: { type: DataTypes.UUID, allowNull: false },
+      requirementId: { type: DataTypes.UUID, allowNull: true },
+      requestId: { type: DataTypes.UUID, allowNull: false },
+      requestHash: { type: DataTypes.STRING(64), allowNull: false },
+      mode: { type: DataTypes.ENUM('individual', 'collective'), allowNull: false },
+      snapshot: { type: DataTypes.JSON, allowNull: false },
+      totalQuantity: { type: DataTypes.DECIMAL(13, 3), allowNull: false },
+      totalCost: { type: DataTypes.DECIMAL(24, 2), allowNull: false },
+    },
+    {
+      ...common,
+      tableName: `${prefix}orders`,
+      indexes: [{ unique: true, fields: ['buyer_id', 'request_id'], name: 'order_buyer_request' }],
+    },
+  );
+  const OrderPortion = connection.define(
+    'OrderPortion',
+    {
+      id: { type: DataTypes.UUID, primaryKey: true, defaultValue: DataTypes.UUIDV4 },
+      orderId: { type: DataTypes.UUID, allowNull: false },
+      farmerId: { type: DataTypes.UUID, allowNull: false },
+      status: {
+        type: DataTypes.ENUM('pending', 'accepted', 'rejected'),
+        allowNull: false,
+        defaultValue: 'pending',
+      },
+      snapshot: { type: DataTypes.JSON, allowNull: false },
+      quantity: { type: DataTypes.DECIMAL(13, 3), allowNull: false },
+      totalCost: { type: DataTypes.DECIMAL(24, 2), allowNull: false },
+      version: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false, defaultValue: 1 },
+      respondedAt: { type: DataTypes.DATE, allowNull: true },
+    },
+    { ...common, tableName: `${prefix}order_portions` },
+  );
+  const OrderItem = connection.define(
+    'OrderItem',
+    {
+      id: { type: DataTypes.UUID, primaryKey: true, defaultValue: DataTypes.UUIDV4 },
+      portionId: { type: DataTypes.UUID, allowNull: false },
+      listingId: { type: DataTypes.UUID, allowNull: true },
+      quantity: { type: DataTypes.DECIMAL(12, 3), allowNull: false },
+      subtotal: { type: DataTypes.DECIMAL(24, 2), allowNull: false },
+      snapshot: { type: DataTypes.JSON, allowNull: false },
+    },
+    { ...common, tableName: `${prefix}order_items` },
+  );
+  const Notification = connection.define(
+    'Notification',
+    {
+      id: { type: DataTypes.UUID, primaryKey: true, defaultValue: DataTypes.UUIDV4 },
+      recipientId: { type: DataTypes.UUID, allowNull: false },
+      orderId: { type: DataTypes.UUID, allowNull: false },
+      title: { type: DataTypes.STRING(160), allowNull: false },
+      message: { type: DataTypes.STRING(1000), allowNull: false },
+      readAt: { type: DataTypes.DATE, allowNull: true },
+    },
+    { ...common, tableName: `${prefix}notifications` },
+  );
+
   const AuthSession = connection.define(
     'AuthSession',
     {
@@ -164,6 +228,16 @@ export function defineModels(connection, prefix = '') {
     onDelete: 'CASCADE',
   });
   PurchaseRequirement.belongsTo(User, { foreignKey: 'buyerId', as: 'buyer' });
+  Order.belongsTo(User, { foreignKey: 'buyerId', onDelete: 'RESTRICT' });
+  Order.belongsTo(PurchaseRequirement, { foreignKey: 'requirementId', onDelete: 'SET NULL' });
+  Order.hasMany(OrderPortion, { foreignKey: 'orderId', as: 'portions' });
+  OrderPortion.belongsTo(Order, { foreignKey: 'orderId', as: 'order' });
+  OrderPortion.belongsTo(User, { foreignKey: 'farmerId', onDelete: 'RESTRICT' });
+  OrderPortion.hasMany(OrderItem, { foreignKey: 'portionId', as: 'items' });
+  OrderItem.belongsTo(OrderPortion, { foreignKey: 'portionId' });
+  OrderItem.belongsTo(CropListing, { foreignKey: 'listingId', onDelete: 'SET NULL' });
+  Notification.belongsTo(User, { foreignKey: 'recipientId', onDelete: 'CASCADE' });
+  Notification.belongsTo(Order, { foreignKey: 'orderId' });
   return {
     User,
     FarmerProfile,
@@ -172,6 +246,10 @@ export function defineModels(connection, prefix = '') {
     AuthSession,
     CropListing,
     PurchaseRequirement,
+    Order,
+    OrderPortion,
+    OrderItem,
+    Notification,
   };
 }
 

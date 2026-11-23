@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { UsersRound, RefreshCw, LoaderCircle, Search, MapPin, Phone } from 'lucide-react';
 import AuthGate from '../components/AuthGate.jsx';
+import OrderButton from '../components/OrderButton.jsx';
 import MatchingRequirementSummary, {
   MatchingTabs,
 } from '../components/MatchingRequirementSummary.jsx';
@@ -227,6 +228,11 @@ function CollectiveContent() {
                   ))}
                 </div>
               </details>
+              <OrderButton
+                requirement={requirement}
+                listingIds={combination.listings.map((listing) => listing.id)}
+                collective
+              />
             </article>
           ))}
         </div>
@@ -247,7 +253,7 @@ function CollectiveContent() {
       )}
       <p className="matching-rules">
         এটি বর্তমান মজুতের ভিত্তিতে সম্ভাব্য সরবরাহ। দেখলে চাহিদার সম্পাদনার সুযোগ খরচ হবে না।
-        পণ্যমূল্যে পরিবহন খরচ অন্তর্ভুক্ত নয়; মজুত সংরক্ষণ ও অর্ডার তৈরি পরবর্তী ধাপে যুক্ত হবে।
+        পণ্যমূল্যে পরিবহন খরচ অন্তর্ভুক্ত নয়। অর্ডার নিশ্চিত করলে সংশ্লিষ্ট মজুত সংরক্ষিত থাকবে।
       </p>
     </section>
   );

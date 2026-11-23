@@ -13,7 +13,7 @@ export default function Login() {
   const from = location.state?.from;
   const destination =
     typeof from === 'string' &&
-    /^\/(?:marketplace|requirements)(?:[/?]|$)/.test(from) &&
+    /^\/(?:marketplace|requirements|orders|notifications)(?:[/?]|$)/.test(from) &&
     !from.includes('\\')
       ? from
       : '/account';

@@ -53,6 +53,9 @@ export default function Account() {
           <p>ফসলের ছবি, দাম ও মজুতের তথ্য যোগ করুন এবং নিজের বিজ্ঞাপন পরিচালনা করুন।</p>
         </div>
         <div className="farmer-listing-links">
+          <Link className="button button-secondary" to="/orders">
+            আমার অর্ডার
+          </Link>
           <Link className="button button-secondary" to="/account/listings">
             আমার বিজ্ঞাপন
           </Link>
@@ -97,8 +100,8 @@ export default function Account() {
             </div>
           </dl>
           <p className="field-hint account-private">
-            <ShieldCheck size={16} aria-hidden="true" /> মোবাইল নম্বর ও NID নিবন্ধনের পর পরিবর্তন করা
-            যাবে না।
+            <ShieldCheck size={16} aria-hidden="true" /> মোবাইল নম্বর ও NID নিবন্ধনের পর পরিবর্তন
+            করা যাবে না।
           </p>
         </article>
         <article className="account-card">

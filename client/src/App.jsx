@@ -17,6 +17,9 @@ import Requirements from './pages/Requirements.jsx';
 import RequirementForm from './pages/RequirementForm.jsx';
 import RequirementMatches from './pages/RequirementMatches.jsx';
 import CollectiveMatches from './pages/CollectiveMatches.jsx';
+import Orders from './pages/Orders.jsx';
+import OrderDetail from './pages/OrderDetail.jsx';
+import Notifications from './pages/Notifications.jsx';
 
 export default function App() {
   const { pathname } = useLocation();
@@ -29,6 +32,8 @@ export default function App() {
       '/marketplace': 'ফসলের বাজার',
       '/requirements': 'আমার ক্রয় চাহিদা',
       '/requirements/new': 'নতুন ক্রয় চাহিদা',
+      '/orders': 'আমার অর্ডার',
+      '/notifications': 'নোটিফিকেশন',
       '/register': 'কৃষক নিবন্ধন',
       '/register/buyer': 'ক্রেতা নিবন্ধন',
       '/admin/buyers': 'ক্রেতার আবেদন পর্যালোচনা',
@@ -37,7 +42,7 @@ export default function App() {
       '/account/listings': 'আমার ফসলের বিজ্ঞাপন',
       '/account/listings/new': 'নতুন ফসলের বিজ্ঞাপন',
     };
-    document.title = `${titles[pathname] || (/^\/account\/listings\/[^/]+\/edit$/.test(pathname) ? 'বিজ্ঞাপন সম্পাদনা' : /^\/requirements\/[^/]+\/edit$/.test(pathname) ? 'ক্রয় চাহিদা সম্পাদনা' : /^\/requirements\/[^/]+\/combinations$/.test(pathname) ? 'কৃষকদের সম্মিলিত সরবরাহ' : /^\/requirements\/[^/]+\/matches$/.test(pathname) ? 'চাহিদার সঙ্গে মিলে যাওয়া ফসল' : /^\/marketplace\/[^/]+$/.test(pathname) ? 'ফসলের বিস্তারিত' : 'পাতা পাওয়া যায়নি')} | ফিল্ডব্রিজ`;
+    document.title = `${titles[pathname] || (/^\/orders\/[^/]+$/.test(pathname) ? 'অর্ডারের বিস্তারিত' : /^\/account\/listings\/[^/]+\/edit$/.test(pathname) ? 'বিজ্ঞাপন সম্পাদনা' : /^\/requirements\/[^/]+\/edit$/.test(pathname) ? 'ক্রয় চাহিদা সম্পাদনা' : /^\/requirements\/[^/]+\/combinations$/.test(pathname) ? 'কৃষকদের সম্মিলিত সরবরাহ' : /^\/requirements\/[^/]+\/matches$/.test(pathname) ? 'চাহিদার সঙ্গে মিলে যাওয়া ফসল' : /^\/marketplace\/[^/]+$/.test(pathname) ? 'ফসলের বিস্তারিত' : 'পাতা পাওয়া যায়নি')} | ফিল্ডব্রিজ`;
     if (previousPath.current !== pathname) {
       window.scrollTo({ top: 0, behavior: 'instant' });
       main.current?.focus({ preventScroll: true });
@@ -61,6 +66,9 @@ export default function App() {
           <Route path="/requirements/:id/edit" element={<RequirementForm />} />
           <Route path="/requirements/:id/matches" element={<RequirementMatches />} />
           <Route path="/requirements/:id/combinations" element={<CollectiveMatches />} />
+          <Route path="/orders" element={<Orders />} />
+          <Route path="/orders/:id" element={<OrderDetail />} />
+          <Route path="/notifications" element={<Notifications />} />
           <Route path="/register" element={<Register />} />
           <Route path="/register/buyer" element={<BuyerRegister />} />
           <Route path="/admin/buyers" element={<AdminBuyers />} />

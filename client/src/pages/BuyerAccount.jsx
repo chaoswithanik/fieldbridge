@@ -119,6 +119,11 @@ export default function BuyerAccount() {
       </div>
       <div className="buyer-market-link">
         {profile.status === 'approved' && (
+          <Link className="button button-secondary" to="/orders">
+            আমার অর্ডার
+          </Link>
+        )}
+        {profile.status === 'approved' && (
           <Link className="button button-primary" to="/requirements">
             <ClipboardList size={17} aria-hidden="true" /> আমার ক্রয় চাহিদা
           </Link>

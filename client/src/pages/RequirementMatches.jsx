@@ -10,6 +10,7 @@ import {
   Search,
 } from 'lucide-react';
 import AuthGate from '../components/AuthGate.jsx';
+import OrderButton from '../components/OrderButton.jsx';
 import MarketCropCard from '../components/MarketCropCard.jsx';
 import { useApiResource } from '../lib/resource.js';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -137,6 +138,7 @@ function MatchesContent() {
                     <span>{listing.farmer.farmAddress}</span>
                   </p>
                 </div>
+                <OrderButton requirement={requirement} listingIds={[listing.id]} />
               </MarketCropCard>
             ))}
           </div>

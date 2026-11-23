@@ -23,6 +23,7 @@ export const env = {
   host: process.env.HOST || '127.0.0.1',
   port: port(process.env.PORT, 5001, 'PORT'),
   clientOrigin: process.env.CLIENT_ORIGIN || 'http://localhost:5174',
+  orders: { quoteSecret: process.env.ORDER_QUOTE_SECRET || randomBytes(32).toString('hex') },
   auth: {
     otpMode:
       process.env.OTP_MODE || (process.env.NODE_ENV === 'production' ? 'disabled' : 'console'),

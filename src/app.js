@@ -10,6 +10,8 @@ import { buyerRouter } from './routes/buyer.js';
 import { adminRouter } from './routes/admin.js';
 import { farmerRouter } from './routes/farmer.js';
 import { marketplaceRouter } from './routes/marketplace.js';
+import { ordersRouter } from './routes/orders.js';
+import { notificationsRouter } from './routes/notifications.js';
 
 export const app = express();
 
@@ -36,6 +38,8 @@ app.use('/api/buyer', buyerRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/farmer', farmerRouter);
 app.use('/api/marketplace', marketplaceRouter);
+app.use('/api/orders', ordersRouter);
+app.use('/api/notifications', notificationsRouter);
 
 app.get('/api/health', (_req, res) => {
   res.json({

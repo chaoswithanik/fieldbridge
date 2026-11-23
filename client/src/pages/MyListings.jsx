@@ -206,7 +206,7 @@ function MyListingsContent() {
                     </p>
                     <dl className="crop-figures">
                       <div>
-                        <dt>মজুতের পরিমাণ</dt>
+                        <dt>অর্ডারের জন্য উন্মুক্ত মজুত</dt>
                         <dd>
                           {formatAmount(listing.quantity)} <span>{unitLabels[listing.unit]}</span>
                         </dd>
@@ -216,6 +216,12 @@ function MyListingsContent() {
                         <dd>৳{formatAmount(listing.pricePerUnit)}</dd>
                       </div>
                     </dl>
+                    {Number(listing.reservedQuantity) > 0 && (
+                      <p className="listing-info">
+                        অর্ডারে সংরক্ষিত {formatAmount(listing.reservedQuantity)}{' '}
+                        {unitLabels[listing.unit]}।
+                      </p>
+                    )}
                     <div className="crop-dates">
                       <p>
                         <CalendarDays size={15} aria-hidden="true" />
@@ -256,7 +262,7 @@ function MyListingsContent() {
                       {listing.status !== 'sold_out' && (
                         <button
                           className="crop-action-text"
-                          disabled={busy}
+                          disabled={busy || Number(listing.reservedQuantity) > 0}
                           onClick={() => {
                             setDialogError('');
                             setAction({ listing, type: 'sold_out' });
@@ -267,7 +273,7 @@ function MyListingsContent() {
                       )}
                       <button
                         className="crop-action-text crop-delete"
-                        disabled={busy}
+                        disabled={busy || Number(listing.reservedQuantity) > 0}
                         onClick={() => {
                           setDialogError('');
                           setAction({ listing, type: 'delete' });

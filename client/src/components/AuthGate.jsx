@@ -2,7 +2,12 @@ import { Navigate, Link, useLocation } from 'react-router-dom';
 import { LoaderCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
 
-export default function AuthGate({ role, approvedBuyer = false, children }) {
+export default function AuthGate({
+  role,
+  approvedBuyer = false,
+  approvalTitle = 'ক্রয় চাহিদা পরিচালনার জন্য অনুমোদন প্রয়োজন।',
+  children,
+}) {
   const { user, loading, loadError, refresh } = useAuth();
   const location = useLocation();
   if (loading)
@@ -34,7 +39,7 @@ export default function AuthGate({ role, approvedBuyer = false, children }) {
   if (approvedBuyer && user.buyerProfile?.status !== 'approved')
     return (
       <section className="page-container account-loading">
-        <h1 className="section-title">ক্রয় চাহিদা পরিচালনার জন্য অনুমোদন প্রয়োজন।</h1>
+        <h1 className="section-title">{approvalTitle}</h1>
         <p>আবেদনের অবস্থা নিজের অ্যাকাউন্টে দেখুন। এর মধ্যে ফসলের বাজার ঘুরে দেখতে পারবেন।</p>
         <div className="requirement-gate-actions">
           <Link className="button button-primary" to="/account">

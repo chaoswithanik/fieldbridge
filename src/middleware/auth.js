@@ -17,7 +17,8 @@ export function requireRole(role) {
       if (!sequelize) throw new AppError(503, 'অ্যাকাউন্ট সেবা এখন প্রস্তুত নয়।');
       const user = await currentUser(req.cookies[SESSION_COOKIE]);
       if (!user) throw new AppError(401, 'এই পাতায় প্রবেশ করতে আগে লগইন করুন।');
-      if (user.role !== role) throw new AppError(403, 'এই কাজ করার অনুমতি আপনার নেই।');
+      if (!(Array.isArray(role) ? role : [role]).includes(user.role))
+        throw new AppError(403, 'এই কাজ করার অনুমতি আপনার নেই।');
       req.user = user;
       next();
     },

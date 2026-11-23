@@ -16,7 +16,7 @@ import FormField from '../components/FormField.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { apiRequest, mediaUrl } from '../lib/api.js';
 import { bangla } from '../lib/registration.js';
-import { unitLabels, statusLabels, listingErrors } from '../lib/listings.js';
+import { unitLabels, statusLabels, listingErrors, formatAmount } from '../lib/listings.js';
 
 function PhotoPreview({ photo, index, onRemove, disabled }) {
   const [url, setUrl] = useState(photo.url ? mediaUrl(photo.url) : '');
@@ -146,7 +146,11 @@ function ListingFormContent({ id }) {
   async function submit(event) {
     event.preventDefault();
     setError('');
-    const issues = listingErrors(form, photos.length, listing?.status === 'sold_out');
+    const issues = listingErrors(
+      form,
+      photos.length,
+      listing?.status === 'sold_out' || Number(listing?.reservedQuantity) > 0,
+    );
     setFields(issues);
     if (Object.keys(issues).length) {
       setError('চিহ্নিত তথ্যগুলো ঠিক করে আবার চেষ্টা করুন।');
@@ -222,6 +226,13 @@ function ListingFormContent({ id }) {
       {!loadFailure && (
         <form className="listing-form-layout" onSubmit={submit} noValidate>
           <div className="listing-form-main">
+            {Number(listing?.reservedQuantity) > 0 && (
+              <p className="listing-info">
+                অর্ডারের জন্য সংরক্ষিত {formatAmount(listing.reservedQuantity)}{' '}
+                {unitLabels[listing.unit]}। নিচে শুধু অর্ডারের জন্য উন্মুক্ত মজুত লিখুন। ফসলের নাম ও
+                একক এখন বদলানো যাবে না।
+              </p>
+            )}
             {listing?.status === 'sold_out' && (
               <p className="listing-info">
                 <Info size={18} aria-hidden="true" /> নতুন মজুতের পরিমাণ দিয়ে সংরক্ষণ করুন। এরপর
@@ -236,6 +247,7 @@ function ListingFormContent({ id }) {
                 <div className="form-full">
                   <FormField
                     name="cropName"
+                    disabled={Number(listing?.reservedQuantity) > 0}
                     label="ফসলের নাম"
                     placeholder="যেমন: আলু, ধান, টমেটো"
                     value={form.cropName}
@@ -246,7 +258,7 @@ function ListingFormContent({ id }) {
                 </div>
                 <FormField
                   name="quantity"
-                  label="মজুতের পরিমাণ"
+                  label="অর্ডারের জন্য উন্মুক্ত মজুত"
                   value={form.quantity}
                   onChange={change}
                   inputMode="decimal"
@@ -256,6 +268,7 @@ function ListingFormContent({ id }) {
                 />
                 <FormField
                   name="unit"
+                  disabled={Number(listing?.reservedQuantity) > 0}
                   label="একক"
                   value={form.unit}
                   onChange={change}

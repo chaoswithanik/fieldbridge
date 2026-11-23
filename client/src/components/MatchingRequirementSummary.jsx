@@ -42,7 +42,7 @@ export default function MatchingRequirementSummary({ requirement }) {
       {requirement.status !== 'active' && (
         <p className="listing-info">
           চাহিদাটি এখন “{requirementLabels[requirement.status]}” অবস্থায় আছে। এখানে বর্তমান মজুতের
-          সঙ্গে মিল দেখানো হচ্ছে।
+          সঙ্গে মিল দেখানো হচ্ছে। অর্ডার দিতে চাহিদাটি চালু করুন।
         </p>
       )}
     </>

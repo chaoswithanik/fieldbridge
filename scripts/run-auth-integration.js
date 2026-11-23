@@ -7,6 +7,7 @@ const suites = [
   'test/auth.integration.test.js',
   'test/requirements.integration.test.js',
   'test/collective.integration.test.js',
+  'test/orders.integration.test.js',
 ];
 try {
   if (!sequelize) throw new Error('configuration');
@@ -30,6 +31,10 @@ try {
       if (code) process.exitCode = 1;
     } finally {
       for (const table of [
+        'notifications',
+        'order_items',
+        'order_portions',
+        'orders',
         'auth_sessions',
         'purchase_requirements',
         'crop_listings',
