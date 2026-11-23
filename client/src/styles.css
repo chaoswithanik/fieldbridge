@@ -3,6 +3,7 @@
 @import './auth.css';
 @import './buyer.css';
 @import './listings.css';
+@import './marketplace.css';
 
 @theme {
   --font-sans: 'Anek Bangla', sans-serif;

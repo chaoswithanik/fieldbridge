@@ -3,7 +3,6 @@ import { MapPinOff, Sprout } from 'lucide-react';
 
 const plannedPages = {
   '/': 'প্রথম পাতা',
-  '/marketplace': 'ফসলের বাজার',
   '/requirements': 'ক্রয় চাহিদা',
 };
 

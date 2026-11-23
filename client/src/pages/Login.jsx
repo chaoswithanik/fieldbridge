@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { LoaderCircle } from 'lucide-react';
 import AuthLayout from '../components/AuthLayout.jsx';
 import FormField from '../components/FormField.jsx';
@@ -9,6 +9,12 @@ import { apiRequest } from '../lib/api.js';
 export default function Login() {
   const { user, acceptUser } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = location.state?.from;
+  const destination =
+    typeof from === 'string' && /^\/marketplace(?:[/?]|$)/.test(from) && !from.includes('\\')
+      ? from
+      : '/account';
   const [form, setForm] = useState({ identifier: '', password: '' });
   const [error, setError] = useState('');
   const [fields, setFields] = useState({});
@@ -41,7 +47,7 @@ export default function Login() {
       });
       setForm({ identifier: '', password: '' });
       acceptUser(response.user);
-      navigate(response.user.role === 'admin' ? '/admin/buyers' : '/account', {
+      navigate(response.user.role === 'admin' ? '/admin/buyers' : destination, {
         replace: true,
       });
     } catch (failure) {
@@ -51,7 +57,7 @@ export default function Login() {
       setBusy(false);
     }
   }
-  if (user) return <Navigate to={user.role === 'admin' ? '/admin/buyers' : '/account'} replace />;
+  if (user) return <Navigate to={user.role === 'admin' ? '/admin/buyers' : destination} replace />;
   return (
     <AuthLayout login>
       <span className="eyebrow">আপনার ফিল্ডব্রিজ অ্যাকাউন্ট</span>

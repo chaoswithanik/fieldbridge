@@ -224,8 +224,8 @@ function ListingFormContent({ id }) {
           <div className="listing-form-main">
             {listing?.status === 'sold_out' && (
               <p className="listing-info">
-                <Info size={18} aria-hidden="true" /> নতুন মজুতের পরিমাণ দিয়ে সংরক্ষণ করুন। এরপর তালিকা
-                থেকে বিজ্ঞাপন আবার চালু করতে পারবেন।
+                <Info size={18} aria-hidden="true" /> নতুন মজুতের পরিমাণ দিয়ে সংরক্ষণ করুন। এরপর
+                তালিকা থেকে বিজ্ঞাপন আবার চালু করতে পারবেন।
               </p>
             )}
             <fieldset className="listing-form-card" disabled={busy}>
@@ -367,8 +367,8 @@ function ListingFormContent({ id }) {
                 </span>
               </legend>
               <p className="field-hint">
-                নিজের ফসলের ১–৫টি পরিষ্কার ছবি দিন। JPG, PNG বা WebP; প্রতিটি সর্বোচ্চ ২ মেগাবাইট। প্রথম
-                ছবিটি প্রধান ছবি হবে।
+                নিজের ফসলের ১–৫টি পরিষ্কার ছবি দিন। JPG, PNG বা WebP; প্রতিটি সর্বোচ্চ ২ মেগাবাইট।
+                প্রথম ছবিটি প্রধান ছবি হবে।
               </p>
               <div className="listing-photo-grid">
                 {photos.map((photo, index) => (
@@ -419,11 +419,15 @@ function ListingFormContent({ id }) {
                 <Check size={17} aria-hidden="true" />{' '}
                 {id
                   ? 'সংরক্ষণ করলে বিজ্ঞাপনের তথ্য হালনাগাদ হবে। বর্তমান অবস্থা একই থাকবে।'
-                  : 'প্রকাশের পর নিজের বিজ্ঞাপন সম্পাদনা বা সাময়িক বন্ধ করতে পারবেন।'}
+                  : 'চালু বিজ্ঞাপন বাজারে দেখা যাবে। অনুমোদিত ক্রেতারা দাম ও আপনার যোগাযোগের তথ্য দেখতে পারবেন।'}
               </p>
               <button type="submit" className="button button-primary" disabled={busy || stale}>
                 {busy && <LoaderCircle className="spin" size={17} aria-hidden="true" />}
-                {busy ? 'সংরক্ষণ করা হচ্ছে…' : id ? 'পরিবর্তন সংরক্ষণ করুন' : 'বিজ্ঞাপন প্রকাশ করুন'}
+                {busy
+                  ? 'সংরক্ষণ করা হচ্ছে…'
+                  : id
+                    ? 'পরিবর্তন সংরক্ষণ করুন'
+                    : 'বিজ্ঞাপন প্রকাশ করুন'}
               </button>
               <Link className="text-link" to="/account/listings">
                 বাতিল করে তালিকায় ফিরুন

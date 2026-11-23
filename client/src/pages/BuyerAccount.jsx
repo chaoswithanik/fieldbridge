@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { apiRequest } from '../lib/api.js';
 import { bangla } from '../lib/registration.js';
 import FormField from '../components/FormField.jsx';
+import { Link } from 'react-router-dom';
 
 const statusInfo = {
   pending: {
@@ -109,6 +110,11 @@ export default function BuyerAccount() {
           )}
         </div>
       </div>
+      <div className="buyer-market-link">
+        <Link className="button button-primary" to="/marketplace">
+          <ShoppingBasket size={17} aria-hidden="true" /> ফসলের বাজার দেখুন
+        </Link>
+      </div>
       {message && (
         <p className="success-note" role="status">
           {message}
@@ -172,13 +178,21 @@ export default function BuyerAccount() {
                       {field('businessType', 'ব্যবসার ধরন', { maxLength: 80 })}
                     </div>
                     <div className="form-full">
-                      {field('address', 'পূর্ণ ঠিকানা', { multiline: true, rows: 3, maxLength: 500 })}
+                      {field('address', 'পূর্ণ ঠিকানা', {
+                        multiline: true,
+                        rows: 3,
+                        maxLength: 500,
+                      })}
                     </div>
                   </>
                 )}
               </div>
               <button className="button button-primary auth-submit" disabled={busy}>
-                {busy ? 'সংরক্ষণ হচ্ছে…' : rejected ? 'সংশোধিত আবেদন জমা দিন' : 'পরিবর্তন সংরক্ষণ করুন'}
+                {busy
+                  ? 'সংরক্ষণ হচ্ছে…'
+                  : rejected
+                    ? 'সংশোধিত আবেদন জমা দিন'
+                    : 'পরিবর্তন সংরক্ষণ করুন'}
               </button>
             </fieldset>
           </form>

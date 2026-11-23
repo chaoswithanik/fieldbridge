@@ -9,6 +9,7 @@ import { AppError } from './lib/errors.js';
 import { buyerRouter } from './routes/buyer.js';
 import { adminRouter } from './routes/admin.js';
 import { farmerRouter } from './routes/farmer.js';
+import { marketplaceRouter } from './routes/marketplace.js';
 
 export const app = express();
 
@@ -34,6 +35,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/buyer', buyerRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/farmer', farmerRouter);
+app.use('/api/marketplace', marketplaceRouter);
 
 app.get('/api/health', (_req, res) => {
   res.json({

@@ -17,8 +17,9 @@ if (process.env.AUTH_INTEGRATION !== '1') {
   const { migrationRunner } = await import('../src/config/migrations.js');
   const { tokenDigest, otpDigest } = await import('../src/lib/crypto.js');
   const { deleteAvatar } = await import('../src/services/avatar.js');
-  const { deleteListingPhotos, listingPhotoDirectory } =
-    await import('../src/services/listing-photos.js');
+  const { deleteListingPhotos, listingPhotoDirectory } = await import(
+    '../src/services/listing-photos.js'
+  );
   const { newSession } = await import('../src/services/auth.js');
   const { access, readdir } = await import('node:fs/promises');
   const { join } = await import('node:path');
@@ -932,6 +933,206 @@ if (process.env.AUTH_INTEGRATION !== '1') {
     assert.equal(new Set([...first.listings, ...second.listings].map((row) => row.id)).size, 13);
     assert.equal((await cropRequest('', { cookie: secondFarmerCookie })).data.total, 0);
     assert.equal((await cropRequest('?status=inactive')).data.total, 0);
+  });
+
+  let marketRows;
+  test('marketplace only shows active stock; anonymous and unapproved viewers receive no prices or farmer data', async () => {
+    const template = await models.CropListing.findOne();
+    const common = {
+      farmerId: primaryUser.id,
+      cropName: 'আমন ধান',
+      quantity: '900',
+      unit: 'kg',
+      pricePerUnit: '38.50',
+      harvestDate: '2026-11-23',
+      availableDate: '2026-11-25',
+      district: 'রংপুর',
+      upazila: 'মিঠাপুকুর',
+      farmAddress: 'বিজ্ঞাপনের বিশেষ খামারের ঠিকানা',
+      description: `ব্যক্তিগত যোগাযোগ ${profile.phone}`,
+      photoFilenames: template.photoFilenames,
+    };
+    marketRows = await models.CropListing.bulkCreate(
+      [
+        { ...common, cropName: 'আমন ধান %_' },
+        {
+          ...common,
+          quantity: '1200',
+          pricePerUnit: '42',
+          harvestDate: '2026-11-24',
+          availableDate: '2026-11-26',
+        },
+        { ...common, unit: 'ton', quantity: '2', pricePerUnit: '38000' },
+        { ...common, status: 'inactive', cropName: 'বন্ধ ধান' },
+        { ...common, status: 'sold_out', quantity: '0', cropName: 'বিক্রি শেষ ধান' },
+        { ...common, quantity: '0', cropName: 'শূন্য মজুত' },
+      ],
+      { returning: true },
+    );
+    const pendingUser = await models.User.findOne({ where: { phone: '01900000041' } });
+    const pendingCookie = `fieldbridge_session=${(await newSession(pendingUser.id)).token}`;
+    const url = '/api/marketplace/listings';
+    for (const cookie of [undefined, 'fieldbridge_session=forged', pendingCookie, farmerCookie]) {
+      const result = await request(`${url}?district=রংপুর`, { cookie });
+      assert.equal(result.status, 200, JSON.stringify(result.data));
+      assert.equal(result.data.total, 3);
+      assert.equal(result.data.access.canViewPrices, false);
+      for (const listing of result.data.listings) {
+        for (const key of [
+          'pricePerUnit',
+          'farmer',
+          'farmAddress',
+          'description',
+          'farmerId',
+          'version',
+        ])
+          assert.equal(key in listing, false, key);
+      }
+      const detail = await request(`${url}/${marketRows[0].id}`, { cookie });
+      assert.equal(detail.status, 200);
+      for (const value of [
+        profile.fullName,
+        profile.phone,
+        profile.nid,
+        common.farmAddress,
+        common.description,
+        'pricePerUnit',
+        'passwordHash',
+      ])
+        assert(!JSON.stringify(detail.data).includes(value), value);
+      assert.equal((await request(`${url}?unit=kg&minPrice=30`, { cookie })).status, 403);
+      assert.equal((await request(`${url}?unit=kg&sort=price_asc`, { cookie })).status, 403);
+    }
+    await models.BuyerProfile.update({ status: 'rejected' }, { where: { userId: pendingUser.id } });
+    assert.equal(
+      (await request(`${url}/${marketRows[0].id}`, { cookie: pendingCookie })).data.access
+        .canViewFarmerDetails,
+      false,
+    );
+  });
+
+  test('approved buyers and admins see only the permitted farmer contact fields and listing address', async () => {
+    const path = `/api/marketplace/listings/${marketRows[0].id}`;
+    for (const cookie of [buyerCookie, adminCookie]) {
+      const result = await request(path, { cookie });
+      assert.equal(result.status, 200, JSON.stringify(result.data));
+      const listing = result.data.listing;
+      assert.equal(result.data.access.canViewPrices, true);
+      assert.equal(listing.pricePerUnit, '38.50');
+      assert.deepEqual(listing.farmer, {
+        fullName: profile.fullName,
+        phone: profile.phone,
+        farmName: profile.farmName,
+        farmAddress: 'বিজ্ঞাপনের বিশেষ খামারের ঠিকানা',
+      });
+      assert.equal(listing.description, `ব্যক্তিগত যোগাযোগ ${profile.phone}`);
+      for (const secret of [profile.nid, profile.email, 'passwordHash', 'nidLast4', 'reviewedBy'])
+        assert(!JSON.stringify(result.data).includes(secret), secret);
+    }
+    const approvedProfile = await models.BuyerProfile.findByPk(buyerId);
+    await approvedProfile.update({ status: 'pending' });
+    const changed = await request(path, { cookie: buyerCookie });
+    assert.equal(
+      changed.data.access.canViewPrices,
+      false,
+      'current approval must be read on every request',
+    );
+    assert.equal('farmer' in changed.data.listing, false);
+    await approvedProfile.update({ status: 'approved' });
+  });
+
+  test('market filters combine name, location, unit, quantity, dates and approved prices without SQL wildcards', async () => {
+    const path = '/api/marketplace/listings';
+    const get = async (query) =>
+      request(`${path}?${new URLSearchParams(query)}`, { cookie: buyerCookie });
+    let result = await get({
+      q: 'আমন',
+      district: 'রংপুর',
+      upazila: 'মিঠা',
+      unit: 'kg',
+      minQuantity: '৮০০',
+      maxQuantity: '১০০০',
+      minPrice: '৩৮',
+      maxPrice: '৪০',
+      harvestFrom: '2026-11-23',
+      harvestTo: '2026-11-23',
+      availableFrom: '2026-11-25',
+      availableTo: '2026-11-25',
+    });
+    assert.equal(result.status, 200, JSON.stringify(result.data));
+    assert.equal(result.data.total, 1);
+    assert.equal(result.data.listings[0].id, marketRows[0].id);
+    assert.equal((await get({ q: '%_' })).data.total, 1, 'search wildcards must be literal');
+    assert.equal((await get({ q: "' OR 1=1 --" })).data.total, 0);
+    assert.equal(
+      (await get({ unit: 'kg', district: 'রংপুর', sort: 'price_asc' })).data.listings[0].id,
+      marketRows[0].id,
+    );
+    assert.equal(
+      (await get({ unit: 'kg', district: 'রংপুর', sort: 'price_desc' })).data.listings[0].id,
+      marketRows[1].id,
+    );
+    assert.equal(
+      (await get({ unit: 'kg', district: 'রংপুর', sort: 'quantity_desc' })).data.listings[0].id,
+      marketRows[1].id,
+    );
+    assert.equal(
+      (await get({ district: 'রংপুর', sort: 'available_asc' })).data.listings[0].availableDate,
+      '2026-11-25',
+    );
+    for (const query of [
+      { minPrice: '20' },
+      { unit: 'kg', minPrice: '40', maxPrice: '30' },
+      { harvestFrom: '2026-02-30' },
+      { page: '-1' },
+      { sort: 'phone' },
+      { includePrice: 'true' },
+    ])
+      assert.equal((await get(query)).status, 422, JSON.stringify(query));
+    const first = (await get({ page: '1' })).data,
+      second = (await get({ page: '2' })).data;
+    assert.equal(first.listings.length, 12);
+    assert.equal(first.total, 16);
+    assert.equal(second.listings.length, 4);
+    assert.equal(new Set([...first.listings, ...second.listings].map((row) => row.id)).size, 16);
+  });
+
+  test('market photo URLs and direct details stop working when stock is closed, empty or unverified', async () => {
+    const path = '/api/marketplace/listings';
+    const photo = marketRows[0].photoFilenames[0];
+    const photoUrl = (id) => new URL(`${path}/${id}/photos/${photo}`, base);
+    const response = await fetch(photoUrl(marketRows[0].id));
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('content-type'), 'image/webp');
+    assert.equal(response.headers.get('cache-control'), 'no-store');
+    for (const row of marketRows.slice(3)) {
+      assert.equal((await request(`${path}/${row.id}`, { cookie: buyerCookie })).status, 404);
+      assert.equal((await fetch(photoUrl(row.id))).status, 404);
+    }
+    assert.equal((await request(`${path}/not-a-valid-id`)).status, 404);
+    assert.equal(
+      (
+        await fetch(
+          new URL(
+            `${path}/${marketRows[0].id}/photos/c382327b-5682-4ab4-baf6-2d70ec977eb5.webp`,
+            base,
+          ),
+        )
+      ).status,
+      404,
+    );
+    await marketRows[0].update({ status: 'inactive' });
+    assert.equal(
+      (await request(`${path}/${marketRows[0].id}`, { cookie: buyerCookie })).status,
+      404,
+    );
+    assert.equal((await fetch(photoUrl(marketRows[0].id))).status, 404);
+    const farmer = await models.User.findByPk(primaryUser.id);
+    await farmer.update({ phoneVerifiedAt: null });
+    assert.equal((await request(`${path}?district=রংপুর`)).data.total, 0);
+    await farmer.update({ phoneVerifiedAt: new Date() });
+    await marketRows[1].destroy();
+    assert.equal((await request(`${path}/${marketRows[1].id}`)).status, 404);
   });
 
   test('login requests are rate-limited', async () => {
