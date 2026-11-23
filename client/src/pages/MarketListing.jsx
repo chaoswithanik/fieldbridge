@@ -50,8 +50,13 @@ function PhotoGallery({ listing }) {
 export default function MarketListing() {
   const { id } = useParams();
   const location = useLocation();
+  const matchingFrom =
+    typeof location.state?.from === 'string' &&
+    /^\/requirements\/[a-f0-9-]{36}\/matches(?:\?|$)/.test(location.state.from);
+  const backLabel = matchingFrom ? 'মিলে যাওয়া ফসলে ফিরুন' : 'ফসলের বাজারে ফিরুন';
   const from =
-    typeof location.state?.from === 'string' && /^\/marketplace(?:\?|$)/.test(location.state.from)
+    typeof location.state?.from === 'string' &&
+    (matchingFrom || /^\/marketplace(?:\?|$)/.test(location.state.from))
       ? location.state.from
       : '/marketplace';
   const { data, loading, error, reload } = useMarketResource(`marketplace/listings/${id}`);
@@ -69,7 +74,7 @@ export default function MarketListing() {
         <h1>এই ফসলের বিজ্ঞাপনটি বাজারে নেই।</h1>
         <p>বিক্রি শেষ হয়ে যেতে পারে, অথবা কৃষক বিজ্ঞাপনটি বন্ধ বা মুছে ফেলেছেন।</p>
         <Link className="button button-primary" to={from}>
-          ফসলের বাজারে ফিরুন
+          {backLabel}
         </Link>
       </section>
     );
@@ -83,7 +88,7 @@ export default function MarketListing() {
           আবার চেষ্টা করুন
         </button>
         <Link className="text-link" to={from}>
-          ফসলের বাজারে ফিরুন
+          {backLabel}
         </Link>
       </section>
     );
@@ -91,7 +96,7 @@ export default function MarketListing() {
   return (
     <section className="page-container market-page">
       <Link className="text-link listing-back" to={from}>
-        ফসলের বাজারে ফিরুন
+        {backLabel}
       </Link>
       <div className="market-heading">
         <div>

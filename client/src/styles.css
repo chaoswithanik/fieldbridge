@@ -5,6 +5,7 @@
 @import './listings.css';
 @import './marketplace.css';
 @import './requirements.css';
+@import './matching.css';
 
 @theme {
   --font-sans: 'Anek Bangla', sans-serif;

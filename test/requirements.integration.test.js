@@ -18,6 +18,7 @@ if (process.env.AUTH_INTEGRATION !== '1') {
   const { hashPassword } = await import('../src/lib/crypto.js');
   const { newSession } = await import('../src/services/auth.js');
   const { createRequirement } = await import('../src/services/requirements.js');
+  const { individualRequirementMatches } = await import('../src/services/matching.js');
   const actors = {},
     cookies = {};
   const input = {
@@ -296,5 +297,177 @@ if (process.env.AUTH_INTEGRATION !== '1') {
       200,
     );
     assert.equal((await request(`/${current.id}`)).status, 404);
+  });
+
+  let matchRequirement, matchRows, matchTemplate;
+  test('individual matching uses the saved exact crop, unit and sufficient stock across districts', async () => {
+    const created = await request('', { method: 'POST', body: input });
+    assert.equal(created.status, 201);
+    matchRequirement = created.data.requirement;
+    matchTemplate = {
+      farmerId: actors.farmer.id,
+      cropName: input.cropName,
+      quantity: '1000.125',
+      unit: 'kg',
+      pricePerUnit: '40',
+      harvestDate: '2026-11-23',
+      availableDate: '2026-11-25',
+      district: 'বগুড়া',
+      upazila: 'শিবগঞ্জ',
+      farmAddress: 'এই ফসলের খামারের ঠিকানা',
+      description: 'পরীক্ষার ফসলের বিবরণ।',
+      photoFilenames: ['c382327b-5682-4ab4-baf6-2d70ec977eb5.webp'],
+    };
+    const unverified = await models.User.create({
+      role: 'farmer',
+      fullName: 'যাচাইবিহীন কৃষক',
+      phone: '01900000087',
+      passwordHash: (await models.User.unscoped().findByPk(actors.farmer.id)).passwordHash,
+    });
+    await models.FarmerProfile.create({
+      userId: unverified.id,
+      nid: '1234567887',
+      district: 'বগুড়া',
+      upazila: 'শিবগঞ্জ',
+      village: 'পরীক্ষা',
+      farmAddress: 'পরীক্ষার ঠিকানা',
+    });
+    matchRows = await models.CropListing.bulkCreate([
+      { ...matchTemplate },
+      {
+        ...matchTemplate,
+        quantity: '1500',
+        pricePerUnit: '30',
+        harvestDate: '2026-11-22',
+        availableDate: '2026-11-26',
+        district: 'রংপুর',
+        upazila: 'মিঠাপুকুর',
+      },
+      { ...matchTemplate, quantity: '1000.124' },
+      { ...matchTemplate, unit: 'ton', quantity: '2000' },
+      { ...matchTemplate, cropName: 'আমন ধান %_' },
+      { ...matchTemplate, cropName: 'আমন ধান চাল' },
+      { ...matchTemplate, quantity: '2000', status: 'inactive' },
+      { ...matchTemplate, quantity: '2000', status: 'sold_out' },
+      { ...matchTemplate, quantity: '0' },
+      { ...matchTemplate, farmerId: unverified.id, quantity: '2000' },
+    ]);
+    const before = await models.PurchaseRequirement.findByPk(matchRequirement.id);
+    const result = await request(`/${matchRequirement.id}/matches`);
+    assert.equal(result.status, 200, JSON.stringify(result.data));
+    assert.equal(result.data.total, 2);
+    assert.equal(result.data.sort, 'available_asc');
+    assert.deepEqual(
+      result.data.listings.map((row) => row.id),
+      [matchRows[0].id, matchRows[1].id],
+    );
+    assert.equal(result.data.requirement.quantity, '1000.125');
+    for (const listing of result.data.listings) {
+      assert.equal(listing.farmer.fullName, actors.farmer.fullName);
+      assert.equal(listing.farmer.phone, actors.farmer.phone);
+      assert.equal(listing.farmer.farmAddress, matchTemplate.farmAddress);
+      assert(!JSON.stringify(listing).includes('1234567883'));
+      for (const key of ['farmerId', 'passwordHash', 'nid', 'email'])
+        assert.equal(key in listing, false);
+    }
+    await before.reload();
+    assert.equal(before.editCount, 0);
+    assert.equal(before.version, 1);
+    assert.equal(result.headers.get('cache-control'), 'no-store');
+  });
+
+  test('matching is private to the approved requirement owner and never accepts filter overrides', async () => {
+    const url = `/${matchRequirement.id}/matches`;
+    assert.equal((await request(url, { cookie: '' })).status, 401);
+    for (const role of ['pending', 'farmer', 'admin'])
+      assert.equal((await request(url, { cookie: cookies[role] })).status, 403);
+    assert.equal((await request(url, { cookie: cookies.other })).status, 404);
+    assert.equal((await request('/not-a-real-id/matches')).status, 404);
+    for (const query of [
+      'quantity=0',
+      'unit=ton',
+      'cropName=ধান',
+      'buyerId=someone',
+      'page=-1',
+      'sort=constructor',
+      'sort=price_asc&sort=price_desc',
+    ])
+      assert.equal((await request(`${url}?${query}`)).status, 422, query);
+    await models.BuyerProfile.update({ status: 'pending' }, { where: { userId: actors.buyer.id } });
+    assert.equal((await request(url)).status, 403);
+    await assert.rejects(
+      individualRequirementMatches(actors.buyer.id, matchRequirement.id),
+      (error) => error.status === 403,
+    );
+    await models.BuyerProfile.update(
+      { status: 'approved' },
+      { where: { userId: actors.buyer.id } },
+    );
+  });
+
+  test('matching sorts one criterion at a time and stock/status changes take effect on refresh', async () => {
+    const url = `/${matchRequirement.id}/matches`;
+    for (const [sort, expected] of [
+      ['price_asc', matchRows[1].id],
+      ['price_desc', matchRows[0].id],
+      ['harvest_asc', matchRows[1].id],
+      ['available_asc', matchRows[0].id],
+    ]) {
+      const result = await request(`${url}?sort=${sort}`);
+      assert.equal(result.status, 200);
+      assert.equal(result.data.listings[0].id, expected);
+    }
+    await matchRows[1].update({ quantity: '1000.124' });
+    assert.equal((await request(url)).data.total, 1);
+    await matchRows[0].update({ status: 'inactive' });
+    assert.equal((await request(url)).data.total, 0);
+    await matchRows[1].update({ quantity: '1500' });
+    await matchRows[0].update({ status: 'active' });
+  });
+
+  test('matches follow the latest requirement, remain read-only after both edits, and support paused requirements', async () => {
+    const url = `/${matchRequirement.id}`;
+    for (const quantity of ['2000', '1000.125']) {
+      const edited = await request(url, {
+        method: 'PUT',
+        body: { ...input, quantity, version: matchRequirement.version },
+      });
+      assert.equal(edited.status, 200);
+      matchRequirement = edited.data.requirement;
+      const matches = await request(`${url}/matches`);
+      assert.equal(matches.data.total, quantity === '2000' ? 0 : 2);
+      assert.equal(matches.data.requirement.version, matchRequirement.version);
+    }
+    assert.equal(matchRequirement.editCount, 2);
+    const changed = await request(`${url}/status`, {
+      method: 'PATCH',
+      body: { status: 'inactive', version: matchRequirement.version },
+    });
+    matchRequirement = changed.data.requirement;
+    const matches = await request(`${url}/matches`);
+    assert.equal(matches.data.requirement.status, 'inactive');
+    assert.equal(matches.data.total, 2);
+    assert.equal(matches.data.requirement.editCount, 2);
+    assert.equal(matches.data.requirement.editsRemaining, 0);
+    assert.equal(
+      (await models.PurchaseRequirement.findByPk(matchRequirement.id)).version,
+      matchRequirement.version,
+    );
+  });
+
+  test('matching pagination is stable, returns a useful empty page and rejects a deleted requirement', async () => {
+    await models.CropListing.bulkCreate(Array.from({ length: 11 }, () => ({ ...matchTemplate })));
+    const url = `/${matchRequirement.id}/matches`;
+    const first = (await request(`${url}?page=1`)).data,
+      second = (await request(`${url}?page=2`)).data;
+    assert.equal(first.total, 13);
+    assert.equal(first.listings.length, 12);
+    assert.equal(second.listings.length, 1);
+    assert.equal(second.pages, 2);
+    assert.equal(new Set([...first.listings, ...second.listings].map((row) => row.id)).size, 13);
+    assert.deepEqual((await request(`${url}?page=3`)).data.listings, []);
+    assert.equal((await request(`${url}?page=3`)).data.requirement.id, matchRequirement.id);
+    await models.PurchaseRequirement.destroy({ where: { id: matchRequirement.id } });
+    assert.equal((await request(url)).status, 404);
   });
 }

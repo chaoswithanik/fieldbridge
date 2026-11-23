@@ -1,0 +1,129 @@
+.requirement-match-link {
+  margin-top: 0.875rem;
+  width: 100%;
+  gap: 0.375rem;
+}
+.matching-requirement {
+  background: white;
+  border: 1px solid var(--color-outline-variant);
+  border-radius: 0.875rem;
+  padding: 1rem 1.25rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem 1rem;
+}
+.matching-requirement-main {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  min-width: 0;
+}
+.matching-requirement-main > div {
+  min-width: 0;
+}
+.matching-requirement-main h2 {
+  color: var(--color-primary);
+  font-size: 1.25rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.matching-requirement-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  background: var(--color-surface-container);
+  color: var(--color-primary);
+  border-radius: 0.625rem;
+  flex-shrink: 0;
+}
+.matching-required-quantity {
+  align-self: center;
+  color: var(--color-on-surface-variant);
+}
+.matching-required-quantity strong {
+  color: var(--color-primary);
+  font-size: 1.1875rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  margin-left: 0.375rem;
+}
+.matching-delivery {
+  display: flex;
+  gap: 0.375rem;
+  align-items: start;
+  grid-column: 1 / -1;
+  color: var(--color-on-surface-variant);
+  border-top: 1px solid var(--color-surface-container-highest);
+  padding-top: 0.75rem;
+  font-size: 0.875rem;
+}
+.matching-delivery svg {
+  margin-top: 0.15rem;
+}
+.matching-delivery span {
+  overflow-wrap: anywhere;
+}
+.matching-rules {
+  margin-block: 0.75rem;
+  color: var(--color-on-surface-variant);
+  font-size: 0.875rem;
+}
+.matching-farmer {
+  padding-top: 0.875rem;
+}
+.matching-farmer h3 {
+  display: flex;
+  align-items: start;
+  gap: 0.375rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  overflow-wrap: anywhere;
+}
+.matching-farmer h3 svg {
+  margin-top: 0.15rem;
+}
+.matching-farm-name {
+  color: var(--color-on-surface-variant);
+  font-size: 0.8125rem;
+  margin-top: 0.125rem;
+}
+.matching-farmer > a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  color: var(--color-primary);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.875rem;
+  min-height: 44px;
+  text-decoration: underline;
+  text-underline-offset: 0.25rem;
+}
+.matching-farm-address {
+  display: flex;
+  align-items: start;
+  gap: 0.375rem;
+  color: var(--color-on-surface-variant);
+  font-size: 0.8125rem;
+}
+.matching-farm-address svg {
+  margin-top: 0.15rem;
+}
+.matching-farm-address span {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+@media (max-width: 767px) {
+  .matching-requirement {
+    padding: 1rem;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.75rem;
+  }
+  .matching-requirement-main {
+    flex-wrap: wrap;
+  }
+  .matching-required-quantity strong {
+    font-size: 1.125rem;
+  }
+}

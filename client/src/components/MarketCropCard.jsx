@@ -4,7 +4,7 @@ import { mediaUrl } from '../lib/api.js';
 import { bangla } from '../lib/registration.js';
 import { unitLabels, formatAmount, formatDate } from '../lib/listings.js';
 
-export default function MarketCropCard({ listing, from }) {
+export default function MarketCropCard({ listing, from, children }) {
   const to = `/marketplace/${listing.id}`;
   return (
     <article className="crop-card market-crop-card">
@@ -71,6 +71,7 @@ export default function MarketCropCard({ listing, from }) {
             <strong>{formatDate(listing.availableDate)}</strong>
           </p>
         </div>
+        {children}
         <Link className="button button-secondary market-details-link" to={to} state={{ from }}>
           বিস্তারিত দেখুন
         </Link>

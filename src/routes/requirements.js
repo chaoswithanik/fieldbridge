@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { rateLimit } from 'express-rate-limit';
 import { AppError } from '../lib/errors.js';
+import { individualRequirementMatches } from '../services/matching.js';
 import {
   listOwnRequirements,
   findOwnRequirement,
@@ -24,12 +25,10 @@ const writeLimit = rateLimit({
   standardHeaders: 'draft-8',
   legacyHeaders: false,
   handler: (_req, res) =>
-    res
-      .status(429)
-      .json({
-        success: false,
-        message: 'অল্প সময়ে অনেকবার পরিবর্তন করেছেন। কিছুক্ষণ পরে চেষ্টা করুন।',
-      }),
+    res.status(429).json({
+      success: false,
+      message: 'অল্প সময়ে অনেকবার পরিবর্তন করেছেন। কিছুক্ষণ পরে চেষ্টা করুন।',
+    }),
 });
 requirementsRouter.get('/', async (req, res) => {
   res.json({ success: true, ...(await listOwnRequirements(req.user.id, req.query)) });
@@ -40,14 +39,18 @@ requirementsRouter.get('/:id', async (req, res) => {
     requirement: ownRequirement(await findOwnRequirement(req.user.id, req.params.id)),
   });
 });
+requirementsRouter.get('/:id/matches', async (req, res) => {
+  res.json({
+    success: true,
+    ...(await individualRequirementMatches(req.user.id, req.params.id, req.query)),
+  });
+});
 requirementsRouter.post('/', writeLimit, async (req, res) => {
-  res
-    .status(201)
-    .json({
-      success: true,
-      message: 'আপনার ক্রয় চাহিদা তৈরি হয়েছে।',
-      requirement: await createRequirement(req.user.id, req.body),
-    });
+  res.status(201).json({
+    success: true,
+    message: 'আপনার ক্রয় চাহিদা তৈরি হয়েছে।',
+    requirement: await createRequirement(req.user.id, req.body),
+  });
 });
 requirementsRouter.put('/:id', writeLimit, async (req, res) => {
   const result = await editRequirement(req.user.id, req.params.id, req.body);

@@ -12,6 +12,7 @@ import {
   Trash2,
   LockKeyhole,
   LoaderCircle,
+  SearchCheck,
 } from 'lucide-react';
 import AuthGate from '../components/AuthGate.jsx';
 import RequirementConfirmation from '../components/RequirementConfirmation.jsx';
@@ -213,6 +214,12 @@ function RequirementsContent() {
                     সম্পাদনা {bangla(requirement.editCount)}/২ · বাকি{' '}
                     {bangla(requirement.editsRemaining)} বার
                   </p>
+                  <Link
+                    className="button button-primary requirement-match-link"
+                    to={`/requirements/${requirement.id}/matches`}
+                  >
+                    <SearchCheck size={17} aria-hidden="true" /> মিলে যাওয়া ফসল দেখুন
+                  </Link>
                   <div className="requirement-actions">
                     {requirement.editsRemaining > 0 ? (
                       <Link

@@ -17,7 +17,7 @@ const visibleFields = [
 ];
 const activeWhere = { status: 'active', quantity: { [Op.gt]: 0 } };
 
-function farmerJoin(details = false) {
+export function marketFarmerJoin(details = false) {
   return {
     model: models.User,
     as: 'farmer',
@@ -110,7 +110,7 @@ export async function searchMarketListings(user, query) {
   const { rows, count } = await models.CropListing.findAndCountAll({
     where,
     attributes: [...visibleFields, ...(full ? ['pricePerUnit'] : [])],
-    include: [farmerJoin()],
+    include: [marketFarmerJoin()],
     limit: 12,
     offset: (values.page - 1) * 12,
     order: [orders[values.sort], ['id', 'DESC']],
@@ -132,7 +132,7 @@ export async function findMarketListing(id, { full = false, photo = false } = {}
     attributes: photo
       ? ['id', 'photoFilenames']
       : [...visibleFields, ...(full ? ['pricePerUnit', 'description', 'farmAddress'] : [])],
-    include: [farmerJoin(full && !photo)],
+    include: [marketFarmerJoin(full && !photo)],
   });
   if (!row) throw new AppError(404, 'বিজ্ঞাপনটি এখন বাজারে পাওয়া যাচ্ছে না।');
   return row;

@@ -15,6 +15,7 @@ import Marketplace from './pages/Marketplace.jsx';
 import MarketListing from './pages/MarketListing.jsx';
 import Requirements from './pages/Requirements.jsx';
 import RequirementForm from './pages/RequirementForm.jsx';
+import RequirementMatches from './pages/RequirementMatches.jsx';
 
 export default function App() {
   const { pathname } = useLocation();
@@ -35,7 +36,7 @@ export default function App() {
       '/account/listings': 'আমার ফসলের বিজ্ঞাপন',
       '/account/listings/new': 'নতুন ফসলের বিজ্ঞাপন',
     };
-    document.title = `${titles[pathname] || (/^\/account\/listings\/[^/]+\/edit$/.test(pathname) ? 'বিজ্ঞাপন সম্পাদনা' : /^\/requirements\/[^/]+\/edit$/.test(pathname) ? 'ক্রয় চাহিদা সম্পাদনা' : /^\/marketplace\/[^/]+$/.test(pathname) ? 'ফসলের বিস্তারিত' : 'পাতা পাওয়া যায়নি')} | ফিল্ডব্রিজ`;
+    document.title = `${titles[pathname] || (/^\/account\/listings\/[^/]+\/edit$/.test(pathname) ? 'বিজ্ঞাপন সম্পাদনা' : /^\/requirements\/[^/]+\/edit$/.test(pathname) ? 'ক্রয় চাহিদা সম্পাদনা' : /^\/requirements\/[^/]+\/matches$/.test(pathname) ? 'চাহিদার সঙ্গে মিলে যাওয়া ফসল' : /^\/marketplace\/[^/]+$/.test(pathname) ? 'ফসলের বিস্তারিত' : 'পাতা পাওয়া যায়নি')} | ফিল্ডব্রিজ`;
     if (previousPath.current !== pathname) {
       window.scrollTo({ top: 0, behavior: 'instant' });
       main.current?.focus({ preventScroll: true });
@@ -57,6 +58,7 @@ export default function App() {
           <Route path="/requirements" element={<Requirements />} />
           <Route path="/requirements/new" element={<RequirementForm />} />
           <Route path="/requirements/:id/edit" element={<RequirementForm />} />
+          <Route path="/requirements/:id/matches" element={<RequirementMatches />} />
           <Route path="/register" element={<Register />} />
           <Route path="/register/buyer" element={<BuyerRegister />} />
           <Route path="/admin/buyers" element={<AdminBuyers />} />
