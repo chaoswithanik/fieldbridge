@@ -7,7 +7,6 @@ import {
   Phone,
   MapPin,
   UserRound,
-  ClipboardList,
   Search,
 } from 'lucide-react';
 import AuthGate from '../components/AuthGate.jsx';
@@ -15,8 +14,9 @@ import MarketCropCard from '../components/MarketCropCard.jsx';
 import { useApiResource } from '../lib/resource.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { bangla } from '../lib/registration.js';
-import { formatAmount, unitLabels } from '../lib/listings.js';
-import { requirementLabels } from '../lib/requirements.js';
+import MatchingRequirementSummary, {
+  MatchingTabs,
+} from '../components/MatchingRequirementSummary.jsx';
 
 function MatchesContent() {
   const { id } = useParams(),
@@ -86,40 +86,12 @@ function MatchesContent() {
           <RefreshCw size={16} aria-hidden="true" /> তথ্য হালনাগাদ করুন
         </button>
       </div>
-      <section className="matching-requirement" aria-label="আপনার ক্রয় চাহিদার তথ্য">
-        <div className="matching-requirement-main">
-          <span className="matching-requirement-icon">
-            <ClipboardList size={23} aria-hidden="true" />
-          </span>
-          <div>
-            <span className="field-hint">আপনার চাহিদা</span>
-            <h2>{requirement.cropName}</h2>
-          </div>
-          <span className={`listing-status requirement-status-${requirement.status}`}>
-            {requirementLabels[requirement.status]}
-          </span>
-        </div>
-        <p className="matching-required-quantity">
-          প্রয়োজন{' '}
-          <strong>
-            {formatAmount(requirement.quantity)} {unitLabels[requirement.unit]}
-          </strong>
-        </p>
-        <p className="matching-delivery">
-          <MapPin size={16} aria-hidden="true" />
-          <span>{requirement.deliveryAddress}</span>
-        </p>
-      </section>
+      <MatchingTabs id={id} />
+      <MatchingRequirementSummary requirement={requirement} />
       <p className="matching-rules">
         ফসলের নাম ও একক একই, বিজ্ঞাপন চালু এবং মজুত আপনার চাহিদার সমান বা বেশি। সব জেলার মিল এখানে
         দেখা যাবে।
       </p>
-      {requirement.status !== 'active' && (
-        <p className="listing-info">
-          চাহিদাটি এখন “{requirementLabels[requirement.status]}” অবস্থায় আছে। এখানে বর্তমান মজুতের
-          সঙ্গে মিল দেখানো হচ্ছে।
-        </p>
-      )}
       <div className="market-results-toolbar">
         <p role="status">{bangla(data.total)}টি বিজ্ঞাপন পুরো পরিমাণ দিতে পারবে</p>
         <div className="market-sort">

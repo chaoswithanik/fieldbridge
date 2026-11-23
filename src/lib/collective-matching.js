@@ -1,0 +1,186 @@
+import { performance } from 'node:perf_hooks';
+import { setImmediate } from 'node:timers/promises';
+import { AppError } from './errors.js';
+
+// Keep DECIMAL quantities exact. Round each listing's cost to paisa before summing.
+export function scaledDecimal(value, places) {
+  const [whole, fraction = ''] = String(value).split('.');
+  return BigInt(whole) * 10n ** BigInt(places) + BigInt(fraction.padEnd(places, '0'));
+}
+export function decimalString(value, places) {
+  const digits = value.toString().padStart(places + 1, '0');
+  return `${digits.slice(0, -places)}.${digits.slice(-places)}`;
+}
+const compare = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
+const defaultFactors = ['availableDate', 'harvestDate', 'cost', 'farmerCount', 'proximity'];
+const sortFactors = {
+  price_asc: 'cost',
+  available_asc: 'availableDate',
+  harvest_asc: 'harvestDate',
+  farmers_asc: 'farmerCount',
+  proximity_asc: 'proximity',
+};
+
+function compareProximity(a, b) {
+  return compare(BigInt(a.sum) * BigInt(b.pairs), BigInt(b.sum) * BigInt(a.pairs));
+}
+
+export function administrativeProximity(members) {
+  const pairsInGroups = (keys) => {
+    const counts = new Map();
+    for (const key of keys) counts.set(key, (counts.get(key) || 0) + 1);
+    return [...counts.values()].reduce((sum, count) => sum + (count * (count - 1)) / 2, 0);
+  };
+  const place = (member, upazila = false) =>
+    JSON.stringify([
+      member.district.normalize('NFC').trim(),
+      ...(upazila ? [member.upazila.normalize('NFC').trim()] : []),
+    ]);
+  const pairs =
+    (members.length * (members.length - 1)) / 2 - pairsInGroups(members.map((m) => m.farmerId));
+  const sameDistrict =
+    pairsInGroups(members.map((m) => place(m))) -
+    pairsInGroups(members.map((m) => `${m.farmerId}:${place(m)}`));
+  const sameUpazila =
+    pairsInGroups(members.map((m) => place(m, true))) -
+    pairsInGroups(members.map((m) => `${m.farmerId}:${place(m, true)}`));
+  const differentDistrict = pairs - sameDistrict,
+    sameDistrictOnly = sameDistrict - sameUpazila;
+  return {
+    sum: differentDistrict * 2 + sameDistrictOnly,
+    pairs: pairs || 1,
+    sameUpazilaPairs: sameUpazila,
+    sameDistrictPairs: sameDistrictOnly,
+    differentDistrictPairs: differentDistrict,
+  };
+}
+export function combinationComparator(sort = 'recommended') {
+  const first = sortFactors[sort];
+  const factors = first
+    ? [first, ...defaultFactors.filter((factor) => factor !== first)]
+    : defaultFactors;
+  return (a, b) => {
+    const category = compare(a.category, b.category);
+    if (category) return category;
+    for (const factor of factors) {
+      const difference =
+        factor === 'proximity'
+          ? compareProximity(a.proximity, b.proximity)
+          : compare(a[factor], b[factor]);
+      if (difference) return difference;
+    }
+    return compare(a.key, b.key);
+  };
+}
+
+// Searches whole listing lots, with at least two distinct farmers. No farmer/listing cap.
+// Bounds discard only branches that cannot improve the proven top five. Work yields to
+// HTTP handling; if exhaustive ranking cannot finish, fail explicitly instead of calling
+// a truncated candidate sample the best results.
+export async function bestCollectiveCombinations(
+  listings,
+  requested,
+  sort = 'recommended',
+  { proximity = administrativeProximity, timeoutMs = 3000 } = {},
+) {
+  const target = scaledDecimal(requested, 3),
+    maximum = (target * 6n) / 5n;
+  const rows = listings
+    .map((listing) => ({
+      listing,
+      quantity: scaledDecimal(listing.quantity, 3),
+      cost:
+        (scaledDecimal(listing.quantity, 3) * scaledDecimal(listing.pricePerUnit, 2) + 500n) /
+        1000n,
+    }))
+    .filter((row) => row.quantity > 0n && row.quantity <= maximum)
+    .sort((a, b) => compare(b.quantity, a.quantity) || compare(a.listing.id, b.listing.id));
+  if (new Set(rows.map((row) => row.listing.farmerId)).size < 2) return [];
+  const suffix = Array(rows.length + 1).fill(0n);
+  for (let i = rows.length - 1; i >= 0; i--) suffix[i] = suffix[i + 1] + rows[i].quantity;
+  const comparator = combinationComparator(sort),
+    results = [],
+    started = performance.now();
+  let operations = 0;
+  for (const [category, minimum, upper] of [
+    [0, target, target],
+    [1, target + 1n, maximum],
+    [2, 1n, target - 1n],
+  ]) {
+    if (results.length === 5 || upper < minimum || suffix[0] < minimum) continue;
+    const phase = [],
+      selected = [],
+      farmers = new Map();
+    const stack = [{ next: 0, quantity: 0n, cost: 0n, availableDate: '', harvestDate: '' }];
+    while (stack.length) {
+      if (++operations % 1024 === 0) {
+        await setImmediate();
+        if (performance.now() - started >= timeoutMs)
+          throw new AppError(
+            503,
+            'সব সমন্বয় তুলনা করতে বেশি সময় লাগছে। সেরা ফল নিশ্চিত করা যায়নি। কিছুক্ষণ পরে আবার চেষ্টা করুন।',
+          );
+      }
+      const parent = stack.at(-1);
+      if (parent.next === rows.length) {
+        stack.pop();
+        if (selected.length) {
+          const id = rows[selected.pop()].listing.farmerId,
+            count = farmers.get(id) - 1;
+          if (count) farmers.set(id, count);
+          else farmers.delete(id);
+        }
+        continue;
+      }
+      const index = parent.next++,
+        row = rows[index],
+        quantity = parent.quantity + row.quantity;
+      if (quantity > upper || quantity + suffix[index + 1] < minimum) continue;
+      const cost = parent.cost + row.cost;
+      const availableDate =
+        parent.availableDate > row.listing.availableDate
+          ? parent.availableDate
+          : row.listing.availableDate;
+      const harvestDate =
+        parent.harvestDate > row.listing.harvestDate ? parent.harvestDate : row.listing.harvestDate;
+      const farmerCount = farmers.size + (farmers.has(row.listing.farmerId) ? 0 : 1);
+      const bound = {
+        category,
+        cost,
+        availableDate,
+        harvestDate,
+        farmerCount: Math.max(2, farmerCount),
+        proximity: { sum: 0, pairs: 1 },
+        key: '',
+      };
+      if (phase.length === 5 - results.length && comparator(bound, phase.at(-1)) > 0) continue;
+      selected.push(index);
+      farmers.set(row.listing.farmerId, (farmers.get(row.listing.farmerId) || 0) + 1);
+      if (quantity >= minimum && farmerCount >= 2) {
+        const members = selected.map((i) => rows[i].listing).sort((a, b) => compare(a.id, b.id));
+        phase.push({
+          category,
+          quantity,
+          cost,
+          availableDate,
+          harvestDate,
+          farmerCount,
+          members,
+          proximity: proximity ? proximity(members) : { sum: 0, pairs: 1 },
+          key: members.map((member) => member.id).join(':'),
+        });
+        phase.sort(comparator);
+        if (phase.length > 5 - results.length) phase.pop();
+      }
+      stack.push({
+        next: quantity === upper ? rows.length : index + 1,
+        quantity,
+        cost,
+        availableDate,
+        harvestDate,
+      });
+    }
+    results.push(...phase);
+  }
+  return results;
+}

@@ -52,8 +52,13 @@ export default function MarketListing() {
   const location = useLocation();
   const matchingFrom =
     typeof location.state?.from === 'string' &&
-    /^\/requirements\/[a-f0-9-]{36}\/matches(?:\?|$)/.test(location.state.from);
-  const backLabel = matchingFrom ? 'মিলে যাওয়া ফসলে ফিরুন' : 'ফসলের বাজারে ফিরুন';
+    /^\/requirements\/[a-f0-9-]{36}\/(?:matches|combinations)(?:\?|$)/.test(location.state.from);
+  const collectiveFrom = matchingFrom && location.state.from.includes('/combinations');
+  const backLabel = collectiveFrom
+    ? 'সম্মিলিত সরবরাহে ফিরুন'
+    : matchingFrom
+      ? 'মিলে যাওয়া ফসলে ফিরুন'
+      : 'ফসলের বাজারে ফিরুন';
   const from =
     typeof location.state?.from === 'string' &&
     (matchingFrom || /^\/marketplace(?:\?|$)/.test(location.state.from))

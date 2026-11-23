@@ -1,7 +1,10 @@
 import { Router } from 'express';
 import { rateLimit } from 'express-rate-limit';
 import { AppError } from '../lib/errors.js';
-import { individualRequirementMatches } from '../services/matching.js';
+import {
+  individualRequirementMatches,
+  collectiveRequirementMatches,
+} from '../services/matching.js';
 import {
   listOwnRequirements,
   findOwnRequirement,
@@ -43,6 +46,12 @@ requirementsRouter.get('/:id/matches', async (req, res) => {
   res.json({
     success: true,
     ...(await individualRequirementMatches(req.user.id, req.params.id, req.query)),
+  });
+});
+requirementsRouter.get('/:id/combinations', async (req, res) => {
+  res.json({
+    success: true,
+    ...(await collectiveRequirementMatches(req.user.id, req.params.id, req.query)),
   });
 });
 requirementsRouter.post('/', writeLimit, async (req, res) => {

@@ -21,3 +21,22 @@ export function individualMatchQuery(input = {}) {
     throw new AppError(422, 'পাতার নম্বর সঠিক নয়।');
   return { sort, page: Number(page) };
 }
+
+export const collectiveMatchSorts = [
+  'recommended',
+  'price_asc',
+  'available_asc',
+  'harvest_asc',
+  'farmers_asc',
+  'proximity_asc',
+];
+
+export function collectiveMatchQuery(input = {}) {
+  if (
+    Object.keys(input).some((key) => key !== 'sort') ||
+    Object.values(input).some((value) => typeof value !== 'string') ||
+    !collectiveMatchSorts.includes(input.sort || 'recommended')
+  )
+    throw new AppError(422, 'সম্মিলিত সরবরাহের সাজানোর ধরন সঠিক নয়।');
+  return { sort: input.sort || 'recommended' };
+}

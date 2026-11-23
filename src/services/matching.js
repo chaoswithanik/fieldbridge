@@ -2,7 +2,16 @@ import { Op, Transaction } from 'sequelize';
 import { sequelize } from '../config/database.js';
 import { models } from '../models/index.js';
 import { AppError } from '../lib/errors.js';
-import { individualMatchQuery, individualMatchSorts } from '../lib/matching-validation.js';
+import {
+  individualMatchQuery,
+  individualMatchSorts,
+  collectiveMatchQuery,
+} from '../lib/matching-validation.js';
+import {
+  bestCollectiveCombinations,
+  scaledDecimal,
+  decimalString,
+} from '../lib/collective-matching.js';
 import { findOwnRequirement, ownRequirement } from './requirements.js';
 import { marketFarmerJoin, marketListing } from './marketplace.js';
 
@@ -54,6 +63,81 @@ export async function individualRequirementMatches(buyerId, id, query = {}) {
         page,
         pages: Math.max(1, Math.ceil(count / 12)),
         sort,
+      };
+    },
+  );
+}
+
+export async function collectiveRequirementMatches(buyerId, id, query = {}) {
+  const { sort } = collectiveMatchQuery(query);
+  return sequelize.transaction(
+    { isolationLevel: Transaction.ISOLATION_LEVELS.REPEATABLE_READ },
+    async (transaction) => {
+      const profile = await models.BuyerProfile.findByPk(buyerId, {
+        transaction,
+        lock: transaction.LOCK.SHARE,
+      });
+      if (!profile || profile.status !== 'approved')
+        throw new AppError(403, 'সম্মিলিত সরবরাহ দেখতে ক্রেতার অনুমোদন প্রয়োজন।');
+      const requirement = await findOwnRequirement(buyerId, id, transaction);
+      const target = scaledDecimal(requirement.quantity, 3);
+      const listings = await models.CropListing.findAll({
+        where: {
+          cropName: requirement.cropName,
+          unit: requirement.unit,
+          status: 'active',
+          quantity: { [Op.gt]: 0, [Op.lte]: decimalString((target * 6n) / 5n, 3) },
+        },
+        attributes: [
+          'id',
+          'farmerId',
+          'cropName',
+          'quantity',
+          'unit',
+          'pricePerUnit',
+          'harvestDate',
+          'availableDate',
+          'district',
+          'upazila',
+          'photoFilenames',
+          'createdAt',
+          'farmAddress',
+          'description',
+        ],
+        include: [marketFarmerJoin(true)],
+        transaction,
+      });
+      const matches = await bestCollectiveCombinations(listings, requirement.quantity, sort);
+      return {
+        requirement: ownRequirement(requirement),
+        sort,
+        combinations: matches.map((match) => ({
+          id: match.key,
+          fulfilment: ['exact', 'excess', 'partial'][match.category],
+          quantity: decimalString(match.quantity, 3),
+          excessQuantity: decimalString(match.quantity > target ? match.quantity - target : 0n, 3),
+          shortageQuantity: decimalString(
+            match.quantity < target ? target - match.quantity : 0n,
+            3,
+          ),
+          totalCost: decimalString(match.cost, 2),
+          availableDate: match.availableDate,
+          harvestDate: match.harvestDate,
+          farmerCount: match.farmerCount,
+          proximity: {
+            sameUpazilaPairs: match.proximity.sameUpazilaPairs,
+            sameDistrictPairs: match.proximity.sameDistrictPairs,
+            differentDistrictPairs: match.proximity.differentDistrictPairs,
+          },
+          listings: match.members.map((listing) => ({
+            ...marketListing(listing, true, true),
+            subtotal: decimalString(
+              (scaledDecimal(listing.quantity, 3) * scaledDecimal(listing.pricePerUnit, 2) + 500n) /
+                1000n,
+              2,
+            ),
+          })),
+        })),
       };
     },
   );

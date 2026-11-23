@@ -3,7 +3,11 @@ import { spawn } from 'node:child_process';
 import { sequelize } from '../src/config/database.js';
 
 // Each suite owns disposable tables; no CREATE DATABASE grant or shared fixture state.
-const suites = ['test/auth.integration.test.js', 'test/requirements.integration.test.js'];
+const suites = [
+  'test/auth.integration.test.js',
+  'test/requirements.integration.test.js',
+  'test/collective.integration.test.js',
+];
 try {
   if (!sequelize) throw new Error('configuration');
   for (const suite of suites) {

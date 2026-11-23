@@ -3,6 +3,203 @@
   width: 100%;
   gap: 0.375rem;
 }
+.requirement-match-actions {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.875rem;
+}
+.requirement-match-actions .requirement-match-link {
+  margin-top: 0;
+}
+.matching-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+.matching-tabs a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0.5rem 0.875rem;
+  border: 1px solid var(--color-outline-variant);
+  border-radius: 0.5rem;
+  color: var(--color-primary);
+  font-size: 0.9375rem;
+}
+.matching-tabs a.active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: white;
+}
+.combination-rules {
+  margin-top: 0.875rem;
+  font-size: 0.875rem;
+  color: var(--color-on-surface-variant);
+}
+.combination-rules summary,
+.combination-members summary {
+  cursor: pointer;
+  min-height: 44px;
+  align-content: center;
+  color: var(--color-primary);
+  font-weight: 500;
+}
+.combination-rules p {
+  margin-top: 0.375rem;
+  max-width: 100ch;
+}
+.combination-list {
+  display: grid;
+  gap: 1rem;
+}
+.combination-card {
+  padding: 1.125rem 1.25rem;
+  background: white;
+  border: 1px solid var(--color-outline-variant);
+  border-radius: 0.875rem;
+  min-width: 0;
+}
+.combination-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.combination-heading h2 {
+  font-size: 1.1875rem;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+.combination-badge {
+  font-size: 0.8125rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: 1rem;
+  color: var(--color-primary);
+  background: var(--color-surface-container);
+}
+.combination-exact {
+  background: var(--color-primary-fixed);
+}
+.combination-excess {
+  background: var(--color-tertiary-fixed);
+}
+.combination-figures {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  margin-block: 1rem;
+}
+.combination-figures dt {
+  font-size: 0.875rem;
+  color: var(--color-on-surface-variant);
+}
+.combination-figures dd {
+  margin: 0.25rem 0 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-primary);
+  overflow-wrap: anywhere;
+}
+.combination-figures dd span {
+  font-size: 0.875rem;
+  font-weight: 400;
+}
+.combination-figures dd.combination-date {
+  font-size: 1rem;
+}
+.combination-notes {
+  font-size: 0.875rem;
+  color: var(--color-on-surface-variant);
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  flex-wrap: wrap;
+}
+.combination-notes p:first-child {
+  font-weight: 500;
+  color: var(--color-primary);
+}
+.combination-members {
+  margin-top: 0.75rem;
+  border-top: 1px solid var(--color-outline-variant);
+}
+.combination-members > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.375rem;
+}
+.combination-member {
+  padding: 0.875rem;
+  background: var(--color-surface-container-low);
+  border: 1px solid var(--color-surface-container-highest);
+  border-radius: 0.625rem;
+  min-width: 0;
+  font-size: 0.875rem;
+  color: var(--color-on-surface-variant);
+  overflow-wrap: anywhere;
+}
+.combination-member-top {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.combination-member h3 {
+  color: var(--color-primary);
+  font-size: 1rem;
+  font-weight: 600;
+}
+.combination-member > p {
+  margin-top: 0.5rem;
+}
+.combination-member strong {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+.combination-phone {
+  display: inline-flex;
+  gap: 0.375rem;
+  align-items: center;
+  min-height: 44px;
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-underline-offset: 0.2rem;
+}
+.combination-address {
+  display: flex;
+  align-items: start;
+  gap: 0.375rem;
+}
+.combination-address svg {
+  margin-top: 0.125rem;
+  flex-shrink: 0;
+}
+.combination-member .text-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-top: 0.375rem;
+}
+@media (max-width: 767px) {
+  .combination-card {
+    padding: 1rem;
+  }
+  .combination-figures {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+  .combination-members > div {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .combination-figures dd {
+    font-size: 1.125rem;
+  }
+}
 .matching-requirement {
   background: white;
   border: 1px solid var(--color-outline-variant);
