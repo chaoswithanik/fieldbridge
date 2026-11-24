@@ -83,9 +83,6 @@ function MatchesContent() {
           <h1>চাহিদার সঙ্গে মিলে যাওয়া ফসল</h1>
           <p>একটি বিজ্ঞাপন থেকেই আপনার পুরো প্রয়োজন মেটাতে পারে এমন ফসল দেখুন।</p>
         </div>
-        <button type="button" className="button button-secondary" onClick={reload}>
-          <RefreshCw size={16} aria-hidden="true" /> তথ্য হালনাগাদ করুন
-        </button>
       </div>
       <MatchingTabs id={id} />
       <MatchingRequirementSummary requirement={requirement} />

@@ -81,7 +81,6 @@ export default function Marketplace() {
             <Sprout size={17} aria-hidden="true" /> মাঠ থেকে বাজারে
           </span>
           <h1>ফসলের বাজার</h1>
-          <p>সারা দেশের কৃষকের ফসল খুঁজুন, পরিমাণ ও সরবরাহের সময় মিলিয়ে দেখুন।</p>
         </div>
         {user?.role === 'farmer' && (
           <Link className="button button-secondary" to="/account/listings">

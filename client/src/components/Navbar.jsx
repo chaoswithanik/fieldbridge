@@ -61,7 +61,7 @@ export default function Navbar() {
         <NavLink
           to="/notifications"
           className="notification-nav"
-          aria-label={`নোটিফিকেশন, না-পড়া ${bangla(unreadCount)}টি`}
+          aria-label={`নোটিফিকেশন, পড়া বাকি ${bangla(unreadCount)}টি`}
           title="নোটিফিকেশন"
         >
           <Bell size={20} aria-hidden="true" />

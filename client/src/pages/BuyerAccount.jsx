@@ -128,9 +128,6 @@ export default function BuyerAccount() {
             <ClipboardList size={17} aria-hidden="true" /> আমার ক্রয় চাহিদা
           </Link>
         )}
-        <Link className="button button-primary" to="/marketplace">
-          <ShoppingBasket size={17} aria-hidden="true" /> ফসলের বাজার দেখুন
-        </Link>
       </div>
       {message && (
         <p className="success-note" role="status">

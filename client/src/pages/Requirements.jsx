@@ -106,7 +106,6 @@ function RequirementsContent() {
             <ClipboardList size={17} aria-hidden="true" /> ক্রেতার আঙিনা
           </span>
           <h1>আমার ক্রয় চাহিদা</h1>
-          <p>কোন ফসল কতটুকু প্রয়োজন, তার তথ্য ও অবস্থা পরিচালনা করুন।</p>
         </div>
         <Link className="button button-primary" to="/requirements/new">
           <Plus size={17} aria-hidden="true" /> নতুন চাহিদা

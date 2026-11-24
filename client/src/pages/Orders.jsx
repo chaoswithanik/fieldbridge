@@ -23,15 +23,7 @@ function OrdersContent() {
             <ClipboardList size={17} aria-hidden="true" /> অর্ডারের খবর
           </span>
           <h1>আমার অর্ডার</h1>
-          <p>
-            {user.role === 'farmer'
-              ? 'আপনার জন্য আসা অর্ডার ও নিজের অংশের উত্তর দেখুন।'
-              : 'আপনার অর্ডার এবং কৃষকদের আলাদা উত্তর দেখুন।'}
-          </p>
         </div>
-        <button className="button button-secondary" onClick={reload}>
-          <RefreshCw size={16} aria-hidden="true" /> তথ্য হালনাগাদ করুন
-        </button>
       </div>
       {loading ? (
         <p className="order-loading" role="status">

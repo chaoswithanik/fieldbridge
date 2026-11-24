@@ -118,9 +118,6 @@ export default function MarketListing() {
             <MapPin size={16} aria-hidden="true" /> {listing.upazila}, {listing.district}
           </p>
         </div>
-        <button className="button button-secondary" type="button" onClick={reload}>
-          তথ্য হালনাগাদ করুন
-        </button>
       </div>
       <MarketAccessNotice access={access} />
       <div className="market-detail-grid">

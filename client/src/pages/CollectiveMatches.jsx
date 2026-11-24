@@ -79,29 +79,9 @@ function CollectiveContent() {
           <h1>কৃষকদের সম্মিলিত সরবরাহ</h1>
           <p>একাধিক কৃষকের ফসল মিলিয়ে আপনার প্রয়োজন মেটানোর সর্বোচ্চ পাঁচটি সমন্বয়।</p>
         </div>
-        <button type="button" className="button button-secondary" onClick={reload}>
-          <RefreshCw size={16} aria-hidden="true" /> তথ্য হালনাগাদ করুন
-        </button>
       </div>
       <MatchingTabs id={id} />
       <MatchingRequirementSummary requirement={requirement} />
-      <details className="combination-rules">
-        <summary>সমন্বয় বাছাইয়ের নিয়ম</summary>
-        <p>
-          একই ফসল ও এককের চালু বিজ্ঞাপনের পুরো মজুত মিলিয়ে সমন্বয় করা হয়। অন্তত দুইজন কৃষক থাকবেন;
-          সর্বোচ্চ সংখ্যার সীমা নেই। চাহিদার চেয়ে সর্বোচ্চ ২০% বেশি গ্রহণযোগ্য।
-        </p>
-        <p>
-          আগে ঠিক সমান, তারপর অতিরিক্ত, শেষে আংশিক পূরণ। একই শ্রেণিতে আগে সরবরাহ → আগে ফসল কাটা → কম
-          মোট দাম → কম কৃষক → কাছাকাছি অবস্থান। সাজানোর অপশন বদলালে একই শ্রেণিতে সেই বিষয়টি আগে
-          তুলনা হবে।
-        </p>
-        <p>
-          সব সদস্যের মধ্যে শেষ সরবরাহ শুরুর তারিখ ও শেষ ফসল কাটার তারিখ দেখানো হয়। নৈকট্য
-          জেলা–উপজেলা দিয়ে আনুমানিক তুলনা; এটি কিলোমিটার বা সড়কপথের দূরত্ব নয়। ভিন্ন জেলার কৃষকও বাদ
-          পড়বেন না।
-        </p>
-      </details>
       <div className="market-results-toolbar">
         <p role="status">{bangla(combinations.length)}টি সমন্বয় পাওয়া গেছে</p>
         <div className="market-sort">

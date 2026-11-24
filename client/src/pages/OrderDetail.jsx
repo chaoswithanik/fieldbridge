@@ -161,16 +161,6 @@ function OrderContent() {
             {orderDate(order.createdAt)} · অর্ডার #{order.id.slice(0, 8)}
           </p>
         </div>
-        <button
-          className="button button-secondary"
-          disabled={busy}
-          onClick={() => {
-            setMessage('');
-            reload();
-          }}
-        >
-          <RefreshCw size={16} aria-hidden="true" /> তথ্য হালনাগাদ করুন
-        </button>
       </div>
       {message && (
         <p className="success-note" role="status">

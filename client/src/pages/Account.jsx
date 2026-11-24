@@ -42,11 +42,6 @@ export default function Account() {
         <Sprout size={17} aria-hidden="true" /> আপনার নিজের আঙিনা
       </span>
       <h1>স্বাগতম, {user.fullName}।</h1>
-      <p className="account-intro">
-        {location.state?.registered
-          ? 'ফোন যাচাই সম্পন্ন হয়েছে। আপনার কৃষক অ্যাকাউন্ট তৈরি হয়েছে।'
-          : 'আপনার কৃষক অ্যাকাউন্টের নিবন্ধিত তথ্য এখানে দেখুন।'}
-      </p>
       <div className="farmer-listing-shortcut">
         <div>
           <h2>আপনার ফসলের বিজ্ঞাপন</h2>

@@ -133,9 +133,6 @@ function ReplacementContent() {
             {unit}
           </p>
         </div>
-        <button className="button button-secondary" onClick={reloadAll}>
-          <RefreshCw size={16} aria-hidden="true" /> তথ্য হালনাগাদ করুন
-        </button>
       </div>
       {!canReplace ? (
         <div className="listing-empty">

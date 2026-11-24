@@ -43,12 +43,8 @@ function NotificationsContent() {
             <Bell size={17} aria-hidden="true" /> অর্ডারের সর্বশেষ খবর
           </span>
           <h1>নোটিফিকেশন</h1>
-          <p>আপনার আগের খবর ও না-পড়া নোটিফিকেশন এখানে দেখুন।</p>
         </div>
         <div className="order-response-actions">
-          <button className="button button-secondary" disabled={busy} onClick={reload}>
-            <RefreshCw size={16} aria-hidden="true" /> তথ্য হালনাগাদ করুন
-          </button>
           <button
             className="button button-primary"
             disabled={busy || !data?.unreadCount}
@@ -77,7 +73,7 @@ function NotificationsContent() {
       ) : (
         <>
           <p className="notification-unread" role="status">
-            না-পড়া {bangla(data.unreadCount)}টি
+            পড়া বাকি {bangla(data.unreadCount)}টি
           </p>
           {data.notifications.length ? (
             <div className="notification-list">
@@ -89,7 +85,7 @@ function NotificationsContent() {
                   <div>
                     <div className="order-list-top">
                       <h2>{notice.title}</h2>
-                      {!notice.readAt && <span className="order-badge order-pending">না-পড়া</span>}
+                      {!notice.readAt && <span className="order-badge order-pending">পড়া বাকি</span>}
                     </div>
                     <p>{notice.message}</p>
                     <p className="field-hint">{orderDate(notice.createdAt)}</p>
