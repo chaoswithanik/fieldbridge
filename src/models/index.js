@@ -1,6 +1,7 @@
 import { DataTypes } from 'sequelize';
 import { sequelize } from '../config/database.js';
 import { env } from '../config/env.js';
+import { buyerDocumentTypes } from '../services/buyer-documents.js';
 
 export function defineModels(connection, prefix = '') {
   const common = { underscored: true, timestamps: true };
@@ -59,6 +60,23 @@ export function defineModels(connection, prefix = '') {
       ...common,
       tableName: `${prefix}buyer_profiles`,
       indexes: [{ fields: ['status', 'submitted_at'] }],
+    },
+  );
+
+  const BuyerDocument = connection.define(
+    'BuyerDocument',
+    {
+      id: { type: DataTypes.UUID, primaryKey: true, defaultValue: DataTypes.UUIDV4 },
+      buyerId: { type: DataTypes.UUID, allowNull: false },
+      documentType: { type: DataTypes.ENUM(...buyerDocumentTypes), allowNull: false },
+      filename: { type: DataTypes.STRING(50), allowNull: false, unique: true },
+      contentType: { type: DataTypes.STRING(100), allowNull: false },
+      applicationVersion: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    },
+    {
+      ...common,
+      tableName: `${prefix}buyer_documents`,
+      indexes: [{ fields: ['buyer_id', 'application_version'], name: 'buyer_docs_buyer_version' }],
     },
   );
 
@@ -231,6 +249,13 @@ export function defineModels(connection, prefix = '') {
   FarmerProfile.belongsTo(User, { foreignKey: 'userId' });
   User.hasOne(BuyerProfile, { foreignKey: 'userId', as: 'buyerProfile', onDelete: 'CASCADE' });
   BuyerProfile.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+  BuyerProfile.hasMany(BuyerDocument, {
+    foreignKey: 'buyerId',
+    sourceKey: 'userId',
+    as: 'documents',
+    onDelete: 'CASCADE',
+  });
+  BuyerDocument.belongsTo(BuyerProfile, { foreignKey: 'buyerId', targetKey: 'userId' });
   BuyerProfile.belongsTo(User, { foreignKey: 'reviewedBy', as: 'reviewer', onDelete: 'SET NULL' });
   User.hasMany(AuthSession, { foreignKey: 'userId', onDelete: 'CASCADE' });
   AuthSession.belongsTo(User, { foreignKey: 'userId', as: 'user' });
@@ -259,6 +284,7 @@ export function defineModels(connection, prefix = '') {
     User,
     FarmerProfile,
     BuyerProfile,
+    BuyerDocument,
     PhoneVerification,
     AuthSession,
     CropListing,

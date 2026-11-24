@@ -15,6 +15,7 @@ import {
   cookieOptions,
 } from '../services/auth.js';
 import { createBuyer } from '../services/buyers.js';
+import { buyerDocumentsUpload } from '../lib/buyer-document-upload.js';
 
 export const authRouter = Router();
 authRouter.use((_req, res, next) => {
@@ -94,8 +95,8 @@ authRouter.get('/me', async (req, res) => {
   res.json({ success: true, user });
 });
 
-authRouter.post('/buyers/register', limiter(10), async (req, res) => {
-  const result = await createBuyer(req.body);
+authRouter.post('/buyers/register', limiter(10), buyerDocumentsUpload, async (req, res) => {
+  const result = await createBuyer(req.body || {}, req.files);
   if (req.cookies[SESSION_COOKIE]) await revokeSession(req.cookies[SESSION_COOKIE]);
   setSession(res, result);
   res

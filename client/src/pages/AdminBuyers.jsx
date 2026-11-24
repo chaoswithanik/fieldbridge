@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, CircleX, RefreshCw, ClipboardList, LoaderCircle } from 'lucide-react';
+import { Check, CircleX, RefreshCw, ClipboardList, FileText, LoaderCircle } from 'lucide-react';
 import AuthGate from '../components/AuthGate.jsx';
 import FormField from '../components/FormField.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
-import { apiRequest } from '../lib/api.js';
+import { apiRequest, mediaUrl } from '../lib/api.js';
 import { bangla } from '../lib/registration.js';
+import { documentLabels } from '../lib/buyer-documents.js';
 
 const labels = { pending: 'অপেক্ষমাণ', approved: 'অনুমোদিত', rejected: 'প্রত্যাখ্যাত', all: 'সব আবেদন' };
 const date = (value) =>
@@ -201,6 +202,29 @@ function AdminBuyerContent() {
                           </div>
                         ))}
                       </dl>
+                      <section className="buyer-application-documents" aria-label="ব্যবসায়িক নথি">
+                        <h3>
+                          <FileText size={18} aria-hidden="true" /> ব্যবসায়িক নথি
+                        </h3>
+                        {selected.documents?.length ? (
+                          <ul>
+                            {selected.documents.map((document) => (
+                              <li key={document.id}>
+                                <a
+                                  className="text-link"
+                                  href={mediaUrl(document.url)}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                >
+                                  {documentLabels[document.documentType] || 'নথি'} দেখুন
+                                </a>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p>কোনো নথি পাওয়া যায়নি।</p>
+                        )}
+                      </section>
                       {selected.rejectionReason && (
                         <p className="rejection-reason">
                           <strong>প্রত্যাখ্যানের কারণ:</strong> {selected.rejectionReason}

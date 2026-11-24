@@ -20,6 +20,7 @@ if (process.env.AUTH_INTEGRATION !== '1') {
   const { deleteListingPhotos, listingPhotoDirectory } = await import(
     '../src/services/listing-photos.js'
   );
+  const { deleteBuyerDocuments } = await import('../src/services/buyer-documents.js');
   const { newSession } = await import('../src/services/auth.js');
   const { access, readdir } = await import('node:fs/promises');
   const { join } = await import('node:path');
@@ -68,6 +69,8 @@ if (process.env.AUTH_INTEGRATION !== '1') {
       () => [],
     );
     await Promise.all(crops.map((row) => deleteListingPhotos(row.photoFilenames)));
+    const documents = await models.BuyerDocument.findAll({ attributes: ['filename'] }).catch(() => []);
+    await deleteBuyerDocuments(documents.map((document) => document.filename));
     await sequelize.close();
     mock.restoreAll();
   });
@@ -347,6 +350,19 @@ if (process.env.AUTH_INTEGRATION !== '1') {
     address: 'বগুড়া সদর, বগুড়া',
     email: 'buyer@example.test',
   };
+  const buyerForm = (values = buyer, documents = [{ type: 'trade_license', name: 'license.pdf' }]) => {
+    const form = new FormData();
+    for (const [key, value] of Object.entries(values)) form.append(key, String(value));
+    for (const document of documents) {
+      form.append('documentTypes', document.type);
+      form.append(
+        'documents',
+        new Blob([Buffer.from('%PDF-1.7\nBuyer business document')], { type: 'application/pdf' }),
+        document.name,
+      );
+    }
+    return form;
+  };
   const admin = {
     ADMIN_NAME: 'পরীক্ষার অ্যাডমিন',
     ADMIN_PHONE: '01900000050',
@@ -383,9 +399,18 @@ if (process.env.AUTH_INTEGRATION !== '1') {
         invalid.data.fields.businessType &&
         invalid.data.fields.address,
     );
+    const missingDocument = await request('/buyers/register', { method: 'POST', body: { ...buyer } });
+    assert.equal(missingDocument.status, 422);
+    assert(missingDocument.data.fields.documents);
     const result = await request('/buyers/register', {
       method: 'POST',
-      body: { ...buyer, role: 'admin', status: 'approved' },
+      body: buyerForm(
+        { ...buyer, role: 'admin', status: 'approved' },
+        [
+          { type: 'trade_license', name: 'license.pdf' },
+          { type: 'etin_certificate', name: 'tin.pdf' },
+        ],
+      ),
     });
     assert.equal(result.status, 201, JSON.stringify(result.data));
     assert.equal(result.data.user.role, 'buyer');
@@ -398,7 +423,7 @@ if (process.env.AUTH_INTEGRATION !== '1') {
       (await request('/me', { cookie: buyerCookie })).data.user.buyerProfile.status,
       'pending',
     );
-    assert.equal((await request('/buyers/register', { method: 'POST', body: buyer })).status, 409);
+    assert.equal((await request('/buyers/register', { method: 'POST', body: buyerForm() })).status, 409);
     assert.equal(
       (
         await request('/api/buyer/resubmit', {
@@ -433,6 +458,22 @@ if (process.env.AUTH_INTEGRATION !== '1') {
     adminCookie = cookiePair(loginResult.cookie);
   });
 
+  test('buyers can list and open their own submitted documents without public access', async () => {
+    const result = await request('/api/buyer/documents', { cookie: buyerCookie });
+    assert.equal(result.status, 200);
+    assert.equal(result.data.documents.length, 2);
+    assert(result.data.documents.every((document) => !('filename' in document)));
+    const url = new URL(result.data.documents[0].url, base);
+    const file = await fetch(url, { headers: { Cookie: buyerCookie } });
+    assert.equal(file.status, 200);
+    assert.equal(file.headers.get('cache-control'), 'no-store');
+    assert.match(file.headers.get('content-type'), /application\/pdf/);
+    assert.match(await file.text(), /^%PDF-/);
+    assert.equal((await fetch(url)).status, 401);
+    assert.equal((await request('/api/buyer/documents', { cookie: adminCookie })).status, 403);
+    assert.equal((await request('/api/buyer/documents/invalid', { cookie: buyerCookie })).status, 404);
+  });
+
   test('only admins can list or review buyers; application details contain no credentials', async () => {
     assert.equal((await request('/api/admin/buyers')).status, 401);
     assert.equal((await request('/api/admin/buyers', { cookie: buyerCookie })).status, 403);
@@ -458,6 +499,12 @@ if (process.env.AUTH_INTEGRATION !== '1') {
       'registeredAt',
     ])
       assert(application[key]);
+    assert.equal(application.documents.length, 2);
+    const documentUrl = new URL(application.documents[0].url, base);
+    const document = await fetch(documentUrl, { headers: { Cookie: adminCookie } });
+    assert.equal(document.status, 200);
+    assert.match(document.headers.get('content-type'), /application\/pdf/);
+    assert.equal((await fetch(documentUrl, { headers: { Cookie: buyerCookie } })).status, 403);
     assert(!JSON.stringify(list.data).includes('passwordHash'));
     assert.equal(
       (
@@ -512,6 +559,17 @@ if (process.env.AUTH_INTEGRATION !== '1') {
       ).status,
       422,
     );
+    const beforeDocuments = await request('/api/buyer/documents', { cookie: buyerCookie });
+    const replacement = await request('/api/buyer/resubmit', {
+      method: 'POST',
+      cookie: buyerCookie,
+      body: buyerForm(amended),
+    });
+    assert.equal(replacement.status, 422);
+    assert.deepEqual(
+      (await request('/api/buyer/documents', { cookie: buyerCookie })).data.documents,
+      beforeDocuments.data.documents,
+    );
     const resubmitted = await request('/api/buyer/resubmit', {
       method: 'POST',
       cookie: buyerCookie,
@@ -522,6 +580,8 @@ if (process.env.AUTH_INTEGRATION !== '1') {
     assert.equal(resubmitted.data.user.buyerProfile.status, 'pending');
     assert.equal(resubmitted.data.user.buyerProfile.rejectionReason, null);
     assert.equal(resubmitted.data.user.buyerProfile.version, 2);
+    const documents = await request('/api/buyer/documents', { cookie: buyerCookie });
+    assert.equal(documents.data.documents.length, 2);
     assert.equal(
       (
         await request(url, {
@@ -595,11 +655,17 @@ if (process.env.AUTH_INTEGRATION !== '1') {
     assert.equal(loginResult.data.user.role, 'buyer');
     const other = await request('/buyers/register', {
       method: 'POST',
-      body: { ...buyer, phone: '01900000041', email: '' },
+      body: buyerForm({ ...buyer, phone: '01900000041', email: '' }),
     });
     assert.equal(other.status, 201);
     assert.equal(other.data.user.email, null);
     assert.equal(other.data.user.buyerProfile.status, 'pending');
+    const otherCookie = cookiePair(other.cookie);
+    const ownDocuments = await request('/api/buyer/documents', { cookie: otherCookie });
+    assert.equal(ownDocuments.data.documents.length, 1);
+    const firstBuyersDocuments = await request('/api/buyer/documents', { cookie: buyerCookie });
+    const protectedUrl = firstBuyersDocuments.data.documents[0].url;
+    assert.equal((await request(protectedUrl, { cookie: otherCookie })).status, 404);
   });
 
   const crop = {

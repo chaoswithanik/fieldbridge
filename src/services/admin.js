@@ -58,6 +58,11 @@ export function applicationData(profile) {
     submittedAt: profile.submittedAt,
     reviewedAt: profile.reviewedAt,
     version: profile.applicationVersion,
+    documents: (profile.documents || []).map((document) => ({
+      id: document.id,
+      documentType: document.documentType,
+      url: `/api/admin/buyers/${profile.userId}/documents/${document.id}`,
+    })),
   };
 }
 
@@ -71,7 +76,15 @@ export async function listBuyerApplications(query = {}) {
     throw new AppError(422, 'পাতার নম্বর সঠিক নয়।');
   const { rows, count } = await models.BuyerProfile.findAndCountAll({
     where: status === 'all' ? {} : { status },
-    include: [{ model: models.User, as: 'user', required: true, where: { role: 'buyer' } }],
+    include: [
+      { model: models.User, as: 'user', required: true, where: { role: 'buyer' } },
+      {
+        model: models.BuyerDocument,
+        as: 'documents',
+        attributes: ['id', 'documentType'],
+        required: false,
+      },
+    ],
     order: [
       ['submittedAt', 'DESC'],
       ['userId', 'ASC'],

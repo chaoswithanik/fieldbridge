@@ -4,6 +4,11 @@ import { AppError } from '../lib/errors.js';
 import { hashPassword } from '../lib/crypto.js';
 import { validPhone } from '../lib/validation.js';
 import { newSession, publicUser } from './auth.js';
+import {
+  deleteBuyerDocuments,
+  prepareBuyerDocuments,
+  saveBuyerDocuments,
+} from './buyer-documents.js';
 
 export function validateBuyer(input = {}, registration = true) {
   input ??= {};
@@ -54,42 +59,65 @@ function validateIdentity(input) {
   return { fullName, email };
 }
 
-export async function createBuyer(input) {
+export async function createBuyer(input, files) {
   const values = validateBuyer(input);
+  const documents = await prepareBuyerDocuments(files, input?.documentTypes, { required: true });
   const passwordHash = await hashPassword(values.password);
-  return sequelize.transaction(async (transaction) => {
-    const user = await models.User.create(
-      {
-        role: 'buyer',
-        fullName: values.fullName,
-        phone: values.phone,
-        email: values.email,
-        passwordHash,
-        phoneVerifiedAt: null,
-      },
-      { transaction },
-    );
-    user.buyerProfile = await models.BuyerProfile.create(
-      {
-        userId: user.id,
-        businessName: values.businessName,
-        businessType: values.businessType,
-        address: values.address,
-        status: 'pending',
-        submittedAt: new Date(),
-        applicationVersion: 1,
-      },
-      { transaction },
-    );
-    return { user: publicUser(user), ...(await newSession(user.id, transaction)) };
-  });
+  let saved = [];
+  try {
+    return await sequelize.transaction(async (transaction) => {
+      const user = await models.User.create(
+        {
+          role: 'buyer',
+          fullName: values.fullName,
+          phone: values.phone,
+          email: values.email,
+          passwordHash,
+          phoneVerifiedAt: null,
+        },
+        { transaction },
+      );
+      user.buyerProfile = await models.BuyerProfile.create(
+        {
+          userId: user.id,
+          businessName: values.businessName,
+          businessType: values.businessType,
+          address: values.address,
+          status: 'pending',
+          submittedAt: new Date(),
+          applicationVersion: 1,
+        },
+        { transaction },
+      );
+      saved = await saveBuyerDocuments(documents);
+      await models.BuyerDocument.bulkCreate(
+        saved.map((document) => ({ ...document, buyerId: user.id, applicationVersion: 1 })),
+        { transaction },
+      );
+      return { user: publicUser(user), ...(await newSession(user.id, transaction)) };
+    });
+  } catch (error) {
+    await deleteBuyerDocuments(saved.map((document) => document.filename));
+    throw error;
+  }
 }
 
-export async function resubmitBuyer(userId, input = {}) {
+export async function resubmitBuyer(userId, input = {}, files) {
   input ??= {};
-  const allowed = ['fullName', 'email', 'businessName', 'businessType', 'address', 'version'];
+  const allowed = [
+    'fullName',
+    'email',
+    'businessName',
+    'businessType',
+    'address',
+    'version',
+  ];
   if (Object.keys(input).some((key) => !allowed.includes(key)))
     throw new AppError(422, 'শুধু আবেদনের সংশোধনযোগ্য তথ্য পাঠান।');
+  if (files?.length)
+    throw new AppError(422, 'জমা দেওয়া নথি পরিবর্তন করা যাবে না।', {
+      documents: 'জমা দেওয়া নথি শুধু দেখতে পারবেন।',
+    });
   const values = validateBuyer(input, false);
   return sequelize.transaction(async (transaction) => {
     const profile = await models.BuyerProfile.findByPk(userId, {
@@ -100,8 +128,18 @@ export async function resubmitBuyer(userId, input = {}) {
       throw new AppError(409, 'শুধু প্রত্যাখ্যাত আবেদন পুনরায় জমা দেওয়া যাবে।');
     if (input.version !== profile.applicationVersion)
       throw new AppError(409, 'আবেদনের অবস্থা বদলেছে। পাতা হালনাগাদ করে আবার চেষ্টা করুন।');
+    const currentDocuments = await models.BuyerDocument.findAll({
+      where: { buyerId: userId },
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+    if (!currentDocuments.length)
+      throw new AppError(422, 'অন্তত একটি ব্যবসায়িক নথি আপলোড করুন।', {
+        documents: 'অন্তত একটি ব্যবসায়িক নথি দিন।',
+      });
     const user = await models.User.findByPk(userId, { transaction });
     await user.update({ fullName: values.fullName, email: values.email }, { transaction });
+    const applicationVersion = profile.applicationVersion + 1;
     await profile.update(
       {
         businessName: values.businessName,
@@ -112,7 +150,7 @@ export async function resubmitBuyer(userId, input = {}) {
         reviewedAt: null,
         reviewedBy: null,
         submittedAt: new Date(),
-        applicationVersion: profile.applicationVersion + 1,
+        applicationVersion,
       },
       { transaction },
     );

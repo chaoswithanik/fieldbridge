@@ -5,9 +5,13 @@ import {
   CircleX,
   ShoppingBasket,
   ClipboardList,
+  FileText,
+  ExternalLink,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
-import { apiRequest } from '../lib/api.js';
+import { apiRequest, mediaUrl } from '../lib/api.js';
+import { useApiResource } from '../lib/resource.js';
+import { documentLabels } from '../lib/buyer-documents.js';
 import { bangla } from '../lib/registration.js';
 import FormField from '../components/FormField.jsx';
 import { Link } from 'react-router-dom';
@@ -33,6 +37,8 @@ const statusInfo = {
 export default function BuyerAccount() {
   const { user, acceptUser, refresh } = useAuth();
   const profile = user.buyerProfile;
+  const { data: documentData, loading: documentsLoading, error: documentsError, reload: reloadDocuments } =
+    useApiResource('buyer/documents');
   const [form, setForm] = useState({}),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
@@ -174,6 +180,35 @@ export default function BuyerAccount() {
               <dd>{profile.address}</dd>
             </div>
           </dl>
+          <section className="buyer-application-documents" aria-label="জমা দেওয়া ব্যবসায়িক নথি">
+            <h3><FileText size={18} aria-hidden="true" /> জমা দেওয়া ব্যবসায়িক নথি</h3>
+            {documentsLoading ? (
+              <p role="status">নথির তালিকা আনা হচ্ছে…</p>
+            ) : documentsError ? (
+              <>
+                <p role="alert">{documentsError.message}</p>
+                <button type="button" className="button button-secondary" onClick={reloadDocuments}>
+                  আবার চেষ্টা করুন
+                </button>
+              </>
+            ) : documentData?.documents.length ? (
+              <>
+                <ul>
+                  {documentData.documents.map((document, index) => (
+                    <li key={document.id}>
+                      <a className="text-link" href={mediaUrl(document.url)} target="_blank" rel="noreferrer">
+                        {bangla(index + 1)}. {documentLabels[document.documentType] || 'নথি'} দেখুন{' '}
+                        <ExternalLink size={14} aria-hidden="true" style={{ display: 'inline' }} />
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+                <p>জমা দেওয়া নথি শুধু দেখতে পারবেন; পরিবর্তন করা যাবে না।</p>
+              </>
+            ) : (
+              <p>কোনো নথি জমা দেওয়া হয়নি।</p>
+            )}
+          </section>
         </article>
         <article className="account-card auth-card">
           <h2>{rejected ? 'সংশোধন করে আবার আবেদন করুন' : 'নাম ও ইমেইল সংশোধন'}</h2>
