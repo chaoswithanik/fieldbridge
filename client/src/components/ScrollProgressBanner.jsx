@@ -6,7 +6,7 @@ function BannerContent() {
   return (
     <div className="page-container flex items-center justify-between gap-4">
       <span className="inline-flex items-center gap-2">
-        <Sprout size={14} aria-hidden="true" /> বাংলাদেশের কৃষক ও ক্রেতার জন্য
+        <Sprout size={12} aria-hidden="true" /> বাংলাদেশের কৃষক ও ক্রেতার জন্য
       </span>
       <span className="announcement-note">একসঙ্গে ফলুক সম্ভাবনা</span>
     </div>

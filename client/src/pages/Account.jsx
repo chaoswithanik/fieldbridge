@@ -38,25 +38,23 @@ export default function Account() {
   const profile = user.farmerProfile;
   return (
     <section className="page-container account-page">
-      <span className="eyebrow">
-        <Sprout size={17} aria-hidden="true" /> আপনার নিজের আঙিনা
-      </span>
-      <h1>স্বাগতম, {user.fullName}।</h1>
-      <div className="farmer-listing-shortcut">
-        <div>
-          <h2>আপনার ফসলের বিজ্ঞাপন</h2>
-          <p>ফসলের ছবি, দাম ও মজুতের তথ্য যোগ করুন এবং নিজের বিজ্ঞাপন পরিচালনা করুন।</p>
-        </div>
-        <div className="farmer-listing-links">
-          <Link className="button button-secondary" to="/orders">
-            আমার অর্ডার
-          </Link>
-          <Link className="button button-secondary" to="/account/listings">
-            আমার বিজ্ঞাপন
-          </Link>
-          <Link className="button button-primary" to="/account/listings/new">
-            <Plus size={17} aria-hidden="true" /> নতুন বিজ্ঞাপন
-          </Link>
+      <div>
+        <span className="eyebrow">
+          <Sprout size={17} aria-hidden="true" /> আপনার নিজের আঙিনা
+        </span>
+        <div className="account-title-row">
+          <h1 className="section-title">স্বাগতম, {user.fullName}।</h1>
+          <div className="farmer-listing-links account-heading-actions">
+            <Link className="button button-secondary" to="/orders">
+              আমার অর্ডার
+            </Link>
+            <Link className="button button-secondary" to="/account/listings">
+              আমার বিজ্ঞাপন
+            </Link>
+            <Link className="button button-primary" to="/account/listings/new">
+              <Plus size={17} aria-hidden="true" /> নতুন বিজ্ঞাপন
+            </Link>
+          </div>
         </div>
       </div>
       <div className="account-grid">

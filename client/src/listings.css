@@ -1,26 +1,6 @@
-.farmer-listing-shortcut {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  background: var(--color-surface-container-lowest);
-  border: 1px solid var(--color-outline-variant);
-  border-radius: 0.75rem;
-  padding: 1rem 1.25rem;
-  margin-top: 1.25rem;
-}
-.farmer-listing-shortcut h2 {
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: var(--color-primary);
-}
-.farmer-listing-shortcut p {
-  font-size: 0.875rem;
-  color: var(--color-on-surface-variant);
-  margin-top: 0.25rem;
-}
 .farmer-listing-links {
   display: flex;
+  flex-wrap: wrap;
   flex-shrink: 0;
   gap: 0.625rem;
 }
@@ -543,9 +523,6 @@
   }
 }
 @media (max-width: 1023px) {
-  .farmer-listing-shortcut {
-    flex-wrap: wrap;
-  }
   .listing-fields {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -605,9 +582,6 @@
   }
   .listing-photo-preview > span {
     font-size: 0.75rem;
-  }
-  .farmer-listing-shortcut {
-    padding: 1rem;
   }
   .farmer-listing-links {
     flex-wrap: wrap;

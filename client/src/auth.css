@@ -438,6 +438,20 @@ button:disabled {
   line-height: 1.4;
   margin-top: .5rem;
 }
+.account-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+}
+.account-heading-actions {
+  margin-top: 0;
+  margin-inline-start: auto;
+}
+.account-title-row .buyer-market-link {
+  margin-top: 0;
+}
 .account-intro {
   color: var(--color-on-surface-variant);
   margin-top: 0.5rem;

@@ -3,7 +3,6 @@ import {
   Clock3,
   BadgeCheck,
   CircleX,
-  RefreshCw,
   ShoppingBasket,
   ClipboardList,
 } from 'lucide-react';
@@ -94,41 +93,53 @@ export default function BuyerAccount() {
   }
   return (
     <section className="page-container account-page">
-      <div className="buyer-page-heading">
+      <div className="buyer-page-heading buyer-account-heading">
         <div>
           <span className="eyebrow">
             <ShoppingBasket size={17} aria-hidden="true" /> আপনার ক্রেতা অ্যাকাউন্ট
           </span>
-          <h1 className="section-title">স্বাগতম, {user.fullName}।</h1>
+          <div className="account-title-row">
+            <h1 className="section-title buyer-welcome">
+              স্বাগতম, {user.fullName}।
+              {profile.status === 'approved' && (
+                <span
+                  className="buyer-status-icon"
+                  tabIndex={0}
+                  role="img"
+                  aria-label={info.title}
+                  data-tooltip={`${info.title} — ${info.text}`}
+                >
+                  <info.Icon size={22} aria-hidden="true" />
+                </span>
+              )}
+            </h1>
+            {profile.status === 'approved' && (
+              <div className="buyer-market-link account-heading-actions">
+                <Link className="button button-secondary" to="/orders">
+                  আমার অর্ডার
+                </Link>
+                <Link className="button button-primary" to="/requirements">
+                  <ClipboardList size={17} aria-hidden="true" /> আমার ক্রয় চাহিদা
+                </Link>
+              </div>
+            )}
+          </div>
         </div>
-        <button type="button" className="button button-secondary" onClick={refresh} disabled={busy}>
-          <RefreshCw size={16} aria-hidden="true" /> অবস্থা হালনাগাদ
-        </button>
       </div>
-      <div className={`approval-banner approval-${profile.status}`}>
-        <info.Icon size={24} aria-hidden="true" />
-        <div>
-          <h2>{info.title}</h2>
-          <p>{info.text}</p>
-          {profile.rejectionReason && (
-            <p className="rejection-reason">
-              <strong>প্রত্যাখ্যানের কারণ:</strong> {profile.rejectionReason}
-            </p>
-          )}
+      {profile.status !== 'approved' && (
+        <div className={`approval-banner approval-${profile.status}`}>
+          <info.Icon size={24} aria-hidden="true" />
+          <div>
+            <h2>{info.title}</h2>
+            <p>{info.text}</p>
+            {profile.rejectionReason && (
+              <p className="rejection-reason">
+                <strong>প্রত্যাখ্যানের কারণ:</strong> {profile.rejectionReason}
+              </p>
+            )}
+          </div>
         </div>
-      </div>
-      <div className="buyer-market-link">
-        {profile.status === 'approved' && (
-          <Link className="button button-secondary" to="/orders">
-            আমার অর্ডার
-          </Link>
-        )}
-        {profile.status === 'approved' && (
-          <Link className="button button-primary" to="/requirements">
-            <ClipboardList size={17} aria-hidden="true" /> আমার ক্রয় চাহিদা
-          </Link>
-        )}
-      </div>
+      )}
       {message && (
         <p className="success-note" role="status">
           {message}
