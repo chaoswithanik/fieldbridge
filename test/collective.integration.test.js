@@ -137,19 +137,19 @@ if (process.env.AUTH_INTEGRATION !== '1') {
   test('collective results use active exact-name/unit verified stock, return whole lots and exact/excess/partial tiers', async () => {
     const result = await request();
     assert.equal(result.status, 200, JSON.stringify(result.data));
-    assert.equal(result.data.combinations.length, 3);
+    assert.equal(result.data.combinations.length, 5);
     assert.deepEqual(
       result.data.combinations.map((c) => c.fulfilment),
-      ['exact', 'excess', 'partial'],
+      ['exact', 'excess', 'partial', 'partial', 'partial'],
     );
     assert.deepEqual(
       result.data.combinations.map((c) => c.quantity),
-      ['100.000', '110.000', '90.000'],
+      ['100.000', '110.000', '50.000', '60.000', '40.000'],
     );
     assert.equal(result.data.combinations[0].availableDate, '2026-11-26');
     assert.equal(result.data.combinations[0].totalCost, '2400.00');
     assert.equal(result.data.combinations[1].excessQuantity, '10.000');
-    assert.equal(result.data.combinations[2].shortageQuantity, '10.000');
+    assert.equal(result.data.combinations[2].shortageQuantity, '50.000');
     assert.equal(result.data.combinations[1].proximity.differentDistrictPairs, 1);
     assert(
       result.data.combinations
@@ -222,7 +222,7 @@ if (process.env.AUTH_INTEGRATION !== '1') {
   test('collective matches follow stock and requirement changes without spending edits or changing version', async () => {
     await listings[1].update({ quantity: '0.000' });
     let result = await request();
-    assert.equal(result.data.combinations.length, 1);
+    assert.equal(result.data.combinations.length, 3);
     assert.equal(result.data.combinations[0].fulfilment, 'excess');
     await requirement.update({
       quantity: '200.000',
@@ -238,7 +238,10 @@ if (process.env.AUTH_INTEGRATION !== '1') {
     assert.equal(requirement.version, 5);
     assert.equal(requirement.editCount, 2);
     await listings[0].update({ status: 'inactive' });
-    assert.deepEqual((await request()).data.combinations, []);
+    result = await request();
+    assert.equal(result.data.combinations.length, 1);
+    assert.equal(result.data.combinations[0].fulfilment, 'partial');
+    assert.equal(result.data.combinations[0].farmerCount, 1);
     await listings[0].update({ status: 'active' });
     await listings[1].update({ quantity: '40.000' });
   });
@@ -292,7 +295,7 @@ if (process.env.AUTH_INTEGRATION !== '1') {
         where: { id: match.listings.map((l) => l.id) },
       });
       assert.equal(match.farmerCount, new Set(rows.map((r) => r.farmerId)).size);
-      assert(match.farmerCount >= 2);
+      assert(match.farmerCount >= 1);
     }
     await requirement.destroy();
     assert.equal((await request()).status, 404);

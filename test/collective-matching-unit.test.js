@@ -38,11 +38,13 @@ test('collective matching classifies exact, inclusive 20% excess and partial wit
   );
 });
 
-test('a collective result requires distinct farmers and counts repeat listings only once per farmer', async () => {
-  assert.deepEqual(
-    await bestCollectiveCombinations([row(1, 60), row(2, 40, { farmerId: 'farmer-1' })], '100'),
-    [],
+test('collective results may use one farmer and count repeat listings only once per farmer', async () => {
+  const singleFarmer = await bestCollectiveCombinations(
+    [row(1, 60), row(2, 40, { farmerId: 'farmer-1' })],
+    '100',
   );
+  assert.equal(singleFarmer[0].farmerCount, 1);
+  assert.equal(singleFarmer[0].members.length, 2);
   const result = await bestCollectiveCombinations(
     [row(1, 30), row(2, 30, { farmerId: 'farmer-1' }), row(3, 40)],
     '100',
@@ -121,7 +123,7 @@ test('bounded search agrees with exhaustive subsets for all sorts, including adm
       const members = rows.filter((_, i) => mask & (1 << i)),
         quantity = members.reduce((s, r) => s + Number(r.quantity), 0);
       const farmers = new Set(members.map((r) => r.farmerId)).size;
-      if (quantity > 12 || farmers < 2) continue;
+      if (quantity > 12) continue;
       let pairs = 0,
         spread = 0;
       for (let i = 0; i < members.length; i++)
@@ -148,7 +150,7 @@ test('bounded search agrees with exhaustive subsets for all sorts, including adm
           .at(-1),
         cost: members.reduce((s, r) => s + Number(r.quantity) * Number(r.pricePerUnit), 0),
         farmers,
-        spread: spread / pairs,
+        spread: pairs ? spread / pairs : 0,
       });
     }
     for (const sort of collectiveMatchSorts) {

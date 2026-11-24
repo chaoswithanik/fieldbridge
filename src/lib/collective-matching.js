@@ -73,7 +73,7 @@ export function combinationComparator(sort = 'recommended') {
   };
 }
 
-// Searches whole listing lots, with at least two distinct farmers. No farmer/listing cap.
+// Searches whole listing lots from one or more farmers. No farmer/listing cap.
 // Bounds discard only branches that cannot improve the proven top five. Work yields to
 // HTTP handling; if exhaustive ranking cannot finish, fail explicitly instead of calling
 // a truncated candidate sample the best results.
@@ -95,7 +95,6 @@ export async function bestCollectiveCombinations(
     }))
     .filter((row) => row.quantity > 0n && row.quantity <= maximum)
     .sort((a, b) => compare(b.quantity, a.quantity) || compare(a.listing.id, b.listing.id));
-  if (new Set(rows.map((row) => row.listing.farmerId)).size < 2) return [];
   const suffix = Array(rows.length + 1).fill(0n);
   for (let i = rows.length - 1; i >= 0; i--) suffix[i] = suffix[i + 1] + rows[i].quantity;
   const comparator = combinationComparator(sort),
@@ -149,14 +148,14 @@ export async function bestCollectiveCombinations(
         cost,
         availableDate,
         harvestDate,
-        farmerCount: Math.max(2, farmerCount),
+        farmerCount,
         proximity: { sum: 0, pairs: 1 },
         key: '',
       };
       if (phase.length === 5 - results.length && comparator(bound, phase.at(-1)) > 0) continue;
       selected.push(index);
       farmers.set(row.listing.farmerId, (farmers.get(row.listing.farmerId) || 0) + 1);
-      if (quantity >= minimum && farmerCount >= 2) {
+      if (quantity >= minimum) {
         const members = selected.map((i) => rows[i].listing).sort((a, b) => compare(a.id, b.id));
         phase.push({
           category,

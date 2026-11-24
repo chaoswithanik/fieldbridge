@@ -21,9 +21,12 @@ export default function Navbar() {
   const { user, loading, logout } = useAuth();
   const unreadCount = useNotificationCount(user);
   const trader = ['buyer', 'farmer'].includes(user?.role);
-  const navigation = trader
-    ? [...links.slice(0, 3), { to: '/orders', label: 'আমার অর্ডার' }, ...links.slice(3)]
-    : links;
+  const navigation =
+    user?.role === 'buyer'
+      ? [...links.slice(0, 3), { to: '/orders', label: 'আমার অর্ডার' }, ...links.slice(3)]
+      : user?.role === 'farmer'
+        ? [...links.slice(0, 2), { to: '/orders', label: 'আমার অর্ডার' }, ...links.slice(3)]
+        : links;
   const [leaving, setLeaving] = useState(false);
   const [logoutError, setLogoutError] = useState('');
   const toggle = useRef(null);

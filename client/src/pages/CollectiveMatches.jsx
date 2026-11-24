@@ -77,7 +77,7 @@ function CollectiveContent() {
             <UsersRound size={17} aria-hidden="true" /> একসঙ্গে চাহিদা পূরণ
           </span>
           <h1>কৃষকদের সম্মিলিত সরবরাহ</h1>
-          <p>একাধিক কৃষকের ফসল মিলিয়ে আপনার প্রয়োজন মেটানোর সর্বোচ্চ পাঁচটি সমন্বয়।</p>
+          <p>একজন বা একাধিক কৃষকের ফসল মিলিয়ে আপনার প্রয়োজন মেটানোর সর্বোচ্চ পাঁচটি সমন্বয়।</p>
         </div>
       </div>
       <MatchingTabs id={id} />
@@ -154,11 +154,13 @@ function CollectiveContent() {
                 </p>
                 <p>
                   সব ফসল কাটা হবে {formatDate(combination.harvestDate)} ·{' '}
-                  {combination.proximity.differentDistrictPairs
-                    ? 'একাধিক জেলার অবস্থান'
-                    : combination.proximity.sameDistrictPairs
-                      ? 'একই জেলার বিভিন্ন উপজেলা'
-                      : 'একই উপজেলার অবস্থান'}
+                  {combination.farmerCount === 1
+                    ? 'একজন কৃষকের অবস্থান'
+                    : combination.proximity.differentDistrictPairs
+                      ? 'একাধিক জেলার অবস্থান'
+                      : combination.proximity.sameDistrictPairs
+                        ? 'একই জেলার বিভিন্ন উপজেলা'
+                        : 'একই উপজেলার অবস্থান'}
                 </p>
               </div>
               <details className="combination-members" open={index === 0}>
@@ -221,11 +223,8 @@ function CollectiveContent() {
           <span className="listing-empty-icon">
             <Search size={30} aria-hidden="true" />
           </span>
-          <h2>একাধিক কৃষকের সমন্বয় পাওয়া যায়নি</h2>
-          <p>
-            একই ফসল ও এককের অন্তত দুইজন কৃষকের উপযুক্ত মজুত প্রয়োজন। একক কৃষকের সরবরাহও দেখে নিতে
-            পারেন।
-          </p>
+          <h2>উপযুক্ত সরবরাহের সমন্বয় পাওয়া যায়নি</h2>
+          <p>একই ফসল ও এককের উপযুক্ত চালু মজুত পাওয়া যায়নি। একক কৃষকের সরবরাহও দেখে নিতে পারেন।</p>
           <Link className="button button-primary" to={`/requirements/${id}/matches`}>
             একক কৃষকের ফসল দেখুন
           </Link>
