@@ -1,3 +1,5 @@
+import { DataTypes } from 'sequelize';
+import { cropSelection } from '../../shared/crop-catalog.js';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import sharp from 'sharp';
@@ -10,7 +12,7 @@ import { saveListingPhotos, deleteListingPhotos } from '../../src/services/listi
 import { saveBuyerDocuments, deleteBuyerDocuments } from '../../src/services/buyer-documents.js';
 import { placeOrder, previewOrder, respondToOrder } from '../../src/services/orders.js';
 import { confirmReplacement, previewReplacement } from '../../src/services/replacements.js';
-import { farmers, buyers, crops, listings, demands } from './fixtures.js';
+import { farmers, buyers, listings, demands, redPotatoLot, redPotatoDemand } from './fixtures.js';
 
 const adminId = 'fbde0000-0000-4000-8000-000000000001';
 const email = (key) => `${key}@fieldbridge.example`;
@@ -80,35 +82,36 @@ async function createAccounts(transaction, admin, password, files) {
   return { farms, businesses };
 }
 
-async function createInventory(transaction, farms, files) {
+async function createInventory(transaction, farms, files, lots = listings) {
   const rows = new Map();
   const today = new Date();
   const dateFormat = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' });
   const day = (offset) => dateFormat.format(new Date(today.getTime() + offset * 86400000));
-  for (const [i, lot] of listings.entries()) {
+  for (const [i, lot] of lots.entries()) {
     const farm = farms.get(lot.farmer);
+    const crop = cropSelection(lot.crop, lot.variety);
     const buffer = await readFile(new URL(`crops/${lot.crop}.webp`, import.meta.url));
     // Each listing owns its upload so a farmer can safely edit or delete the photos.
     const photoFilenames = await saveListingPhotos([{ buffer }]);
     files.photos.push(...photoFilenames);
     const row = await models.CropListing.create({
-      farmerId: farm.userId, cropName: crops[lot.crop], quantity: lot.quantity, unit: lot.unit,
+      farmerId: farm.userId, ...crop, quantity: lot.quantity, unit: lot.unit,
       pricePerUnit: lot.price, status: lot.status, photoFilenames,
       harvestDate: day(-(i % 4)), availableDate: day(i % 3),
       district: farm.district, upazila: farm.upazila, farmAddress: farm.farmAddress,
-      description: `${farm.farm} থেকে বাছাই করা ${crops[lot.crop]}। সংগ্রহের আগে সময় জানিয়ে দিন।`,
+      description: `${farm.farm} থেকে বাছাই করা ${crop.cropName}। সংগ্রহের আগে সময় জানিয়ে দিন।`,
     }, { transaction });
     rows.set(lot.key, row);
   }
   return rows;
 }
 
-async function createDemands(transaction, businesses) {
+async function createDemands(transaction, businesses, examples = demands) {
   const rows = new Map();
-  for (const demand of demands) {
+  for (const demand of examples) {
     const business = businesses.get(demand.buyer);
     const row = await models.PurchaseRequirement.create({
-      buyerId: business.userId, cropName: crops[demand.crop], quantity: demand.quantity,
+      buyerId: business.userId, ...cropSelection(demand.crop, demand.variety), quantity: demand.quantity,
       unit: demand.unit, deliveryAddress: business.address, instructions: demand.instructions,
       status: demand.status,
     }, { transaction });
@@ -155,21 +158,38 @@ async function seed() {
   if (env.nodeEnv === 'production') throw new Error('Run the demo against a development database.');
   if (!sequelize) throw new Error('Configure MySQL in .env before running the demo.');
   await migrationRunner(sequelize).up();
+  const SeedVersion = sequelize.define('DemoSeedVersion', {
+    name: { type: DataTypes.STRING(80), primaryKey: true },
+  }, { tableName: env.database.tablePrefix + 'demo_seed_versions', timestamps: false });
+  await SeedVersion.sync();
   const files = { photos: [], documents: [] };
   try {
     return await sequelize.transaction(async (transaction) => {
       // The fixed admin ID is committed in the same transaction as the entire demo.
-      if (await models.User.findByPk(adminId, { transaction })) return false;
+      const version = 'potato-variety';
+      if (await models.User.findByPk(adminId, { transaction, lock: transaction.LOCK.UPDATE })) {
+        if (await SeedVersion.findByPk(version, { transaction })) return 'installed';
+        const farmer = await models.User.findOne({ where: { email: email(redPotatoLot.farmer) }, transaction });
+        const buyer = await models.User.findOne({ where: { email: email(redPotatoDemand.buyer) }, transaction });
+        const farm = farmer && await models.FarmerProfile.findByPk(farmer.id, { transaction });
+        const business = buyer && await models.BuyerProfile.findByPk(buyer.id, { transaction });
+        if (!farm || !business) return 'missing-actors';
+        await createInventory(transaction, new Map([[redPotatoLot.farmer, farm]]), files, [redPotatoLot]);
+        await createDemands(transaction, new Map([[redPotatoDemand.buyer, business]]), [redPotatoDemand]);
+        await SeedVersion.create({ name: version }, { transaction });
+        return 'upgraded';
+      }
       const password = await demoPassword();
       const admin = await models.User.create({
         id: adminId, role: 'admin', fullName: 'ডেমো প্রশাসক', email: email('admin'),
         phone: phone(1), passwordHash: await hashPassword(password),
       }, { transaction });
       const { farms, businesses } = await createAccounts(transaction, admin, password, files);
-      const inventory = await createInventory(transaction, farms, files);
-      const requirements = await createDemands(transaction, businesses);
+      const inventory = await createInventory(transaction, farms, files, [...listings, redPotatoLot]);
+      const requirements = await createDemands(transaction, businesses, [...demands, redPotatoDemand]);
       await createOrders(transaction, inventory, requirements);
-      return true;
+      await SeedVersion.create({ name: version }, { transaction });
+      return 'created';
     });
   } catch (error) {
     await Promise.all([deleteListingPhotos(files.photos), deleteBuyerDocuments(files.documents)]);
@@ -178,10 +198,13 @@ async function seed() {
 }
 
 try {
-  const created = await seed();
-  console.log(created
-    ? `Created 1 admin, ${farmers.length} farmers, ${buyers.length} buyers, ${listings.length} listings, ${demands.length} demands and 5 orders.`
-    : 'Demo already installed. Your demo activity has been preserved.');
+  const result = await seed();
+  console.log({
+    created: `Created 1 admin, ${farmers.length} farmers, ${buyers.length} buyers, ${listings.length + 1} listings, ${demands.length + 1} demands and 5 orders.`,
+    upgraded: 'Added the red potato listing and demand to your existing demo.',
+    installed: 'Demo already installed. Your demo activity has been preserved.',
+    'missing-actors': 'Existing demo preserved. The red potato example needs the original farmer3 and buyer accounts.',
+  }[result]);
   console.log('Login emails (@fieldbridge.example): admin, farmer1–farmer5, buyer, wholesale, pending, rejected.');
   console.log('Shared local password: uploads/demo-login.txt');
   console.log('Start with buyer@fieldbridge.example at /requirements to explore crop matches.');

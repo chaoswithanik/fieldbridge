@@ -198,6 +198,7 @@ function MyListingsContent() {
                   </div>
                   <div className="crop-card-content">
                     <h2>{listing.cropName}</h2>
+                    {!listing.cropId && <p className="field-hint">ফসলের পুরোনো নাম · শ্রেণিবিন্যাস প্রয়োজন</p>}
                     <p className="crop-location">
                       <MapPin size={15} aria-hidden="true" /> {listing.upazila}, {listing.district}
                     </p>

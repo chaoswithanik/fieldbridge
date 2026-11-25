@@ -314,6 +314,11 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.875rem 1rem;
 }
+.crop-picker-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: 0.875rem 1rem;
+}
 .form-field select {
   width: 100%;
   min-height: 44px;

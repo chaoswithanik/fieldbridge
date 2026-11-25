@@ -12,6 +12,8 @@ import {
 export function ownRequirement(row) {
   return {
     id: row.id,
+    cropId: row.cropId,
+    varietyId: row.varietyId,
     cropName: row.cropName,
     quantity: row.quantity,
     unit: row.unit,
@@ -102,8 +104,7 @@ export async function createRequirement(buyerId, input) {
 
 export async function editRequirement(buyerId, id, input) {
   onlyRequirementFields(input, [...requirementFields, 'version']);
-  const values = validateRequirement(input),
-    version = requirementVersion(input.version);
+  const version = requirementVersion(input.version);
   return sequelize.transaction(async (transaction) => {
     await approvedBuyer(buyerId, transaction);
     const row = await findOwnRequirement(buyerId, id, transaction);
@@ -113,6 +114,7 @@ export async function editRequirement(buyerId, id, input) {
         409,
         'এই চাহিদা ইতিমধ্যে ২ বার সম্পাদনা করা হয়েছে। আর সম্পাদনা করা যাবে না।',
       );
+    const values = validateRequirement(input, row);
     const changed = requirementFields.some((key) =>
       key === 'quantity'
         ? Number(row.quantity) !== Number(values.quantity)

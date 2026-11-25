@@ -178,6 +178,7 @@ function CollectiveContent() {
                       </div>
                       <p>
                         <strong>
+                          {listing.varietyId && `${listing.cropName} · `}
                           {formatAmount(listing.proposedQuantity)} {unit}
                         </strong>{' '}
                         · প্রতি {unit} {money(listing.pricePerUnit)} · উপমোট{' '}

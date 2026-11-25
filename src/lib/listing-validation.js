@@ -1,3 +1,4 @@
+import { validateCrop } from './crop-identity.js';
 import { AppError } from './errors.js';
 import { normalizeDigits } from './validation.js';
 
@@ -16,11 +17,10 @@ function validDate(value) {
   );
 }
 
-export function validateListing(input = {}, { soldOut = false } = {}) {
+export function validateListing(input = {}, { soldOut = false, existing } = {}) {
   const fields = {};
-  const values = {};
+  const values = validateCrop(input, fields, existing);
   for (const [key, label, min, max] of [
-    ['cropName', 'ফসলের নাম', 2, 100],
     ['district', 'জেলা', 2, 80],
     ['upazila', 'উপজেলা', 2, 80],
     ['farmAddress', 'খামারের ঠিকানা', 5, 500],

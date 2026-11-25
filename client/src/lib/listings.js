@@ -14,8 +14,8 @@ export const formatDate = (value) =>
 
 export function listingErrors(form, photoCount, soldOut) {
   const errors = {};
+  if (!form.cropId) errors.cropName = 'তালিকা থেকে ফসল বেছে নিন।';
   for (const [key, label, min, max] of [
-    ['cropName', 'ফসলের নাম', 2, 100],
     ['district', 'জেলা', 2, 80],
     ['upazila', 'উপজেলা', 2, 80],
     ['farmAddress', 'খামারের ঠিকানা', 5, 500],

@@ -137,6 +137,7 @@ function OrderPreview({ requirementId, replacementOrderId, listingIds, onClose }
               <div key={item.listingId}>
                 <strong>{item.snapshot.farmerName}</strong>
                 <p>
+                  {item.snapshot.varietyId && `${item.snapshot.cropName} · `}
                   {formatAmount(item.quantity)} {unit} × {formatMoney(item.snapshot.pricePerUnit)} ·
                   উপমোট {formatMoney(item.subtotal)}
                 </p>

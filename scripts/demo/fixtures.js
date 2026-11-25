@@ -14,11 +14,6 @@ export const buyers = [
   { key: 'rejected', name: 'আনিস মণ্ডল', business: 'ফসল সংগ্রহ কেন্দ্র', type: 'সংগ্রহ কেন্দ্র', address: '২১ স্টেশন রোড, বগুড়া সদর', status: 'rejected' },
 ];
 
-export const crops = {
-  potato: 'আলু', tomato: 'টমেটো', carrot: 'গাজর', pumpkin: 'মিষ্টিকুমড়া',
-  cucumber: 'শসা', radish: 'মূলা', corn: 'ভুট্টা',
-};
-
 function lot(key, farmer, crop, quantity, price, unit = 'kg', status = 'active') {
   return { key, farmer, crop, quantity, price, unit, status };
 }
@@ -63,3 +58,10 @@ export const demands = [
   demand('declined', 'corn', 10, 'piece', 'দশটি ভুট্টার একটি পরীক্ষামূলক চালান চাই।', 'wholesale'),
   demand('replacement', 'corn', 20, 'piece', 'প্রথম সরবরাহকারী না পারলে বিকল্প খামার থেকে নেব।'),
 ];
+
+
+// Added separately so existing demo installations can receive this scenario once.
+export const redPotatoLot = { ...lot('red-potato', 'farmer3', 'potato', 42, 30), variety: 'red' };
+export const redPotatoDemand = {
+  ...demand('red-potato', 'potato', 40, 'kg', 'শুধু লাল আলু প্রয়োজন।'), variety: 'red',
+};

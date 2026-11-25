@@ -1,3 +1,4 @@
+import CropPicker from '../components/CropPicker.jsx';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ClipboardList, MapPin, Pencil, LoaderCircle, LockKeyhole, Info } from 'lucide-react';
@@ -22,6 +23,8 @@ function RequirementFormContent({ id }) {
   const requirement = data?.requirement;
   const [form, setForm] = useState({
     cropName: '',
+    cropId: '',
+    varietyId: '',
     quantity: '',
     unit: 'kg',
     deliveryAddress: user.buyerProfile.address,
@@ -36,7 +39,7 @@ function RequirementFormContent({ id }) {
     if (requirement) {
       setForm(
         Object.fromEntries(
-          ['cropName', 'quantity', 'unit', 'deliveryAddress', 'instructions'].map((key) => [
+          ['cropId', 'varietyId', 'cropName', 'quantity', 'unit', 'deliveryAddress', 'instructions'].map((key) => [
             key,
             requirement[key] ?? '',
           ]),
@@ -151,15 +154,16 @@ function RequirementFormContent({ id }) {
               <ClipboardList size={18} aria-hidden="true" /> প্রয়োজনীয় ফসল
             </legend>
             <div className="listing-fields">
-              <div className="form-full">
-                <FormField
-                  name="cropName"
-                  label="ফসলের নাম"
-                  placeholder="যেমন: আলু, ধান, টমেটো"
-                  value={form.cropName}
-                  onChange={change}
-                  maxLength={100}
+              <div className="form-full crop-picker-fields">
+                <CropPicker
+                  form={form}
                   error={fields.cropName}
+                  legacyName={requirement && !requirement.cropId ? requirement.cropName : undefined}
+                  onChange={(selection) => {
+                    setForm((current) => ({ ...current, ...selection }));
+                    setFields((current) => ({ ...current, cropName: undefined }));
+                  }}
+                  buyer
                 />
               </div>
               <FormField

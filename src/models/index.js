@@ -99,6 +99,8 @@ export function defineModels(connection, prefix = '') {
     {
       id: { type: DataTypes.UUID, primaryKey: true, defaultValue: DataTypes.UUIDV4 },
       farmerId: { type: DataTypes.UUID, allowNull: false },
+      cropId: { type: DataTypes.STRING(50), allowNull: true },
+      varietyId: { type: DataTypes.STRING(50), allowNull: true },
       cropName: { type: DataTypes.STRING(100), allowNull: false },
       quantity: { type: DataTypes.DECIMAL(12, 3), allowNull: false },
       reservedQuantity: { type: DataTypes.DECIMAL(12, 3), allowNull: false, defaultValue: 0 },
@@ -130,6 +132,8 @@ export function defineModels(connection, prefix = '') {
     {
       id: { type: DataTypes.UUID, primaryKey: true, defaultValue: DataTypes.UUIDV4 },
       buyerId: { type: DataTypes.UUID, allowNull: false },
+      cropId: { type: DataTypes.STRING(50), allowNull: true },
+      varietyId: { type: DataTypes.STRING(50), allowNull: true },
       cropName: { type: DataTypes.STRING(100), allowNull: false },
       quantity: { type: DataTypes.DECIMAL(12, 3), allowNull: false },
       unit: { type: DataTypes.ENUM('kg', 'ton', 'piece'), allowNull: false },

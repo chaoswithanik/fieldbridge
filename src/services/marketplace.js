@@ -1,3 +1,4 @@
+import { resolveCropName, searchCropCatalog } from '../../shared/crop-catalog.js';
 import { Op, fn, col, where as sqlWhere } from 'sequelize';
 import { models } from '../models/index.js';
 import { AppError } from '../lib/errors.js';
@@ -5,6 +6,8 @@ import { canViewMarketDetails, marketplaceQuery } from '../lib/marketplace-valid
 
 const visibleFields = [
   'id',
+  'cropId',
+  'varietyId',
   'cropName',
   'quantity',
   'unit',
@@ -38,6 +41,8 @@ export function marketFarmerJoin(details = false) {
 export function marketListing(row, fullAccess = false, detail = false) {
   return {
     id: row.id,
+    cropId: row.cropId,
+    varietyId: row.varietyId,
     cropName: row.cropName,
     quantity: row.quantity,
     unit: row.unit,
@@ -75,8 +80,16 @@ export async function searchMarketListings(user, query) {
   const values = marketplaceQuery(query, full);
   const where = { ...activeWhere };
   const conditions = [];
+  if (values.q) {
+    const exact = resolveCropName(values.q);
+    const selections = exact ? [exact] : searchCropCatalog(values.q);
+    const nameContains = sqlWhere(fn('LOCATE', values.q, col('CropListing.crop_name')), { [Op.gt]: 0 });
+    conditions.push({ [Op.or]: [
+      ...(exact ? [{ cropId: null, [Op.and]: [nameContains] }] : [nameContains]),
+      ...selections.map(({ cropId, varietyId }) => ({ cropId, ...(varietyId ? { varietyId } : {}) })),
+    ] });
+  }
   for (const [key, column] of [
-    ['q', 'crop_name'],
     ['district', 'district'],
     ['upazila', 'upazila'],
   ])

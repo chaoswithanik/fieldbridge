@@ -446,7 +446,7 @@ if (process.env.AUTH_INTEGRATION !== '1') {
     const input = {
       ...fixture,
       quantity: '400.000',
-      cropName: 'বদলে যাওয়া নাম',
+      cropName: 'লাল আলু',
       retainedPhotos: JSON.stringify(fixture.photoFilenames),
       version: listing.version,
     };

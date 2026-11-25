@@ -177,6 +177,7 @@ function RequirementsContent() {
                 >
                   <div className="requirement-card-heading">
                     <h2>{requirement.cropName}</h2>
+                    {!requirement.cropId && <p className="field-hint">ফসলের পুরোনো নাম · শ্রেণিবিন্যাস প্রয়োজন</p>}
                     <span className={`listing-status requirement-status-${requirement.status}`}>
                       {requirementLabels[requirement.status]}
                     </span>

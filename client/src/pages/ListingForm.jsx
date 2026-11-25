@@ -1,3 +1,4 @@
+import CropPicker from '../components/CropPicker.jsx';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
@@ -48,6 +49,8 @@ function ListingFormContent({ id }) {
   const profile = user.farmerProfile;
   const [form, setForm] = useState({
     cropName: '',
+    cropId: '',
+    varietyId: '',
     quantity: '',
     unit: 'kg',
     pricePerUnit: '',
@@ -83,6 +86,8 @@ function ListingFormContent({ id }) {
         setForm(
           Object.fromEntries(
             [
+              'cropId',
+              'varietyId',
               'cropName',
               'quantity',
               'unit',
@@ -93,7 +98,7 @@ function ListingFormContent({ id }) {
               'upazila',
               'farmAddress',
               'description',
-            ].map((key) => [key, String(row[key])]),
+            ].map((key) => [key, String(row[key] ?? '')]),
           ),
         );
         setPhotos(row.photos);
@@ -151,6 +156,7 @@ function ListingFormContent({ id }) {
       photos.length,
       listing?.status === 'sold_out' || Number(listing?.reservedQuantity) > 0,
     );
+    if (!listing?.cropId && listing?.cropName === form.cropName) delete issues.cropName;
     setFields(issues);
     if (Object.keys(issues).length) {
       setError('চিহ্নিত তথ্যগুলো ঠিক করে আবার চেষ্টা করুন।');
@@ -241,16 +247,16 @@ function ListingFormContent({ id }) {
                 <Sprout size={18} aria-hidden="true" /> ফসলের তথ্য
               </legend>
               <div className="listing-fields">
-                <div className="form-full">
-                  <FormField
-                    name="cropName"
-                    disabled={Number(listing?.reservedQuantity) > 0}
-                    label="ফসলের নাম"
-                    placeholder="যেমন: আলু, ধান, টমেটো"
-                    value={form.cropName}
-                    onChange={change}
-                    maxLength={100}
+                <div className="form-full crop-picker-fields">
+                  <CropPicker
+                    form={form}
                     error={fields.cropName}
+                    legacyName={listing && !listing.cropId ? listing.cropName : undefined}
+                    onChange={(selection) => {
+                      setForm((current) => ({ ...current, ...selection }));
+                      setFields((current) => ({ ...current, cropName: undefined }));
+                    }}
+                    disabled={Number(listing?.reservedQuantity) > 0}
                   />
                 </div>
                 <FormField

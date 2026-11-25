@@ -155,7 +155,7 @@ function ReplacementContent() {
           <details className="combination-rules">
             <summary>বিকল্প বাছাইয়ের নিয়ম</summary>
             <p>
-              অর্ডারের সময়কার ফসলের নাম, একক ও ঠিকানা ব্যবহার করা হয়। আগে এই অর্ডারে থাকা সব কৃষক
+              অর্ডারের সময়কার ফসল, জাত, একক ও ঠিকানা ব্যবহার করা হয়। আগে এই অর্ডারে থাকা সব কৃষক
               বাদ থাকবেন। নতুন কৃষকের চালু উন্মুক্ত মজুত থেকে বেছে নিন।
             </p>
             <p>
@@ -253,6 +253,7 @@ function ReplacementContent() {
                         <div key={listing.id}>
                           <strong>{listing.farmer.fullName}</strong>
                           <p>
+                            {listing.varietyId && `${listing.cropName} · `}
                             {formatAmount(listing.proposedQuantity)} {unit} · প্রতি {unit}{' '}
                             {formatMoney(listing.pricePerUnit)}
                           </p>

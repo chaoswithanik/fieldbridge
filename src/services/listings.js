@@ -11,6 +11,8 @@ import { saveListingPhotos, deleteListingPhotos } from './listing-photos.js';
 import { scaledDecimal, decimalString } from '../lib/collective-matching.js';
 
 const inputFields = [
+  'cropId',
+  'varietyId',
   'cropName',
   'quantity',
   'unit',
@@ -38,6 +40,8 @@ function checkFields(input, allowed) {
 export function ownListing(row) {
   return {
     id: row.id,
+    cropId: row.cropId,
+    varietyId: row.varietyId,
     cropName: row.cropName,
     quantity: row.quantity,
     reservedQuantity: row.reservedQuantity,
@@ -146,6 +150,7 @@ export async function editListing(farmerId, id, input, files = []) {
   const current = await findOwnListing(farmerId, id);
   checkVersion(current, version);
   const values = validateListing(input, {
+    existing: current,
     soldOut: current.status === 'sold_out' || scaledDecimal(current.reservedQuantity, 3) > 0n,
   });
   const kept = retainedPhotos(input.retainedPhotos);
@@ -159,7 +164,11 @@ export async function editListing(farmerId, id, input, files = []) {
       const row = await findOwnListing(farmerId, id, transaction);
       checkVersion(row, version);
       const held = scaledDecimal(row.reservedQuantity, 3);
-      if (held > 0n && (values.cropName !== row.cropName || values.unit !== row.unit))
+      if (
+        held > 0n &&
+        (values.cropId !== row.cropId || values.varietyId !== row.varietyId ||
+          values.cropName !== row.cropName || values.unit !== row.unit)
+      )
         throw new AppError(
           409,
           'অর্ডারের জন্য মজুত সংরক্ষিত আছে। ফসলের নাম ও একক এখন বদলানো যাবে না।',

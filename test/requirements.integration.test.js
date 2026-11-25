@@ -307,6 +307,8 @@ if (process.env.AUTH_INTEGRATION !== '1') {
     matchTemplate = {
       farmerId: actors.farmer.id,
       cropName: input.cropName,
+      cropId: matchRequirement.cropId,
+      varietyId: matchRequirement.varietyId,
       quantity: '1000.125',
       unit: 'kg',
       pricePerUnit: '40',
@@ -345,8 +347,8 @@ if (process.env.AUTH_INTEGRATION !== '1') {
       },
       { ...matchTemplate, quantity: '1000.124' },
       { ...matchTemplate, unit: 'ton', quantity: '2000' },
-      { ...matchTemplate, cropName: 'আমন ধান %_' },
-      { ...matchTemplate, cropName: 'আমন ধান চাল' },
+      { ...matchTemplate, cropId: null, varietyId: null, cropName: 'আমন ধান %_' },
+      { ...matchTemplate, cropId: null, varietyId: null, cropName: 'আমন ধান চাল' },
       { ...matchTemplate, quantity: '2000', status: 'inactive' },
       { ...matchTemplate, quantity: '2000', status: 'sold_out' },
       { ...matchTemplate, quantity: '0' },
@@ -469,5 +471,50 @@ if (process.env.AUTH_INTEGRATION !== '1') {
     assert.equal((await request(`${url}?page=3`)).data.requirement.id, matchRequirement.id);
     await models.PurchaseRequirement.destroy({ where: { id: matchRequirement.id } });
     assert.equal((await request(url)).status, 404);
+  });
+
+  test('market discovery, matching and checkout agree on crop aliases and optional variety', async () => {
+    const { previewOrder } = await import('../src/services/orders.js');
+    const { searchMarketListings } = await import('../src/services/marketplace.js');
+    const { cropSelection } = await import('../shared/crop-catalog.js');
+    const identities = [cropSelection('potato'), cropSelection('potato', 'red'), cropSelection('sweet-potato')];
+    const lots = await models.CropListing.bulkCreate(identities.map((identity) => ({
+      ...matchTemplate, ...identity, quantity: '100',
+    })));
+    for (const [q, expected] of [['ALU', [0, 1]], ['red pot', [1]], ['মিষ্টিআলু', [2]]]) {
+      const market = await searchMarketListings(null, { q });
+      assert.deepEqual(new Set(market.listings.map((row) => row.id)), new Set(expected.map((i) => lots[i].id)));
+    }
+    for (const [cropName, expected] of [['potatoes', [0, 1]], ['লাল আলু', [1]]]) {
+      const { data, status } = await request('', { method: 'POST', body: { ...input, cropName, quantity: '100' } });
+      assert.equal(status, 201);
+      const requirementId = data.requirement.id;
+      const matches = await request(`/${requirementId}/combinations`);
+      assert.deepEqual(new Set(matches.data.combinations.flatMap((c) => c.listings.map((l) => l.id))),
+        new Set(expected.map((i) => lots[i].id)));
+      for (const [index, listing] of lots.entries()) {
+        const preview = previewOrder(actors.buyer.id, { requirementId, listingIds: [listing.id] });
+        if (expected.includes(index)) assert((await preview).quoteToken);
+        else await assert.rejects(preview, (error) => error.status === 409);
+      }
+    }
+  });
+
+  test('catalog migration converts exact aliases and leaves ambiguous legacy names available for review', async () => {
+    const { up } = await import('../migrations/20261125-010-crop-catalog.js');
+    const listings = await models.CropListing.bulkCreate(['RED potato', 'আলু বা মিষ্টি আলু'].map((cropName) => ({
+      ...matchTemplate, cropId: null, varietyId: null, cropName,
+    })));
+    const demand = await models.PurchaseRequirement.create({
+      buyerId: actors.buyer.id, cropName: '  Alu ', quantity: '5', unit: 'kg', deliveryAddress: input.deliveryAddress,
+    });
+    await up({ context: sequelize.getQueryInterface() });
+    for (const row of [...listings, demand]) await row.reload();
+    assert.equal(listings[0].cropId, 'potato');
+    assert.equal(listings[0].varietyId, 'red');
+    assert.equal(listings[1].cropId, null);
+    assert.equal(listings[1].cropName, 'আলু বা মিষ্টি আলু');
+    assert.equal(demand.cropId, 'potato');
+    assert.equal(demand.varietyId, null);
   });
 }

@@ -7,8 +7,8 @@ export const requirementLabels = {
 };
 export function requirementErrors(form) {
   const fields = {};
+  if (!form.cropId) fields.cropName = 'তালিকা থেকে ফসল বেছে নিন।';
   for (const [key, label, min, max] of [
-    ['cropName', 'ফসলের নাম', 2, 100],
     ['deliveryAddress', 'ডেলিভারির পূর্ণ ঠিকানা', 5, 500],
   ])
     if (form[key].trim().length < min || form[key].trim().length > max)

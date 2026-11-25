@@ -669,7 +669,7 @@ if (process.env.AUTH_INTEGRATION !== '1') {
   });
 
   const crop = {
-    cropName: 'পরীক্ষার আলু',
+    cropId: 'potato',
     quantity: '৫০০.১২৫',
     unit: 'kg',
     pricePerUnit: '২৫.৫০',

@@ -1,3 +1,4 @@
+import { validateCrop } from './crop-identity.js';
 import { AppError } from './errors.js';
 import { normalizeDigits } from './validation.js';
 import { listingUnits } from './listing-validation.js';
@@ -5,6 +6,8 @@ import { listingUnits } from './listing-validation.js';
 export const requirementStatuses = ['active', 'inactive', 'fulfilled'];
 export const requirementFields = [
   'cropName',
+  'cropId',
+  'varietyId',
   'quantity',
   'unit',
   'deliveryAddress',
@@ -21,11 +24,10 @@ export function onlyRequirementFields(input, allowed) {
     throw new AppError(422, 'শুধু চাহিদার নির্ধারিত তথ্য পাঠান।');
 }
 
-export function validateRequirement(input) {
+export function validateRequirement(input, existing) {
   const fields = {},
-    values = {};
+    values = validateCrop(input, fields, existing);
   for (const [key, label, min, max] of [
-    ['cropName', 'ফসলের নাম', 2, 100],
     ['deliveryAddress', 'ডেলিভারির পূর্ণ ঠিকানা', 5, 500],
   ]) {
     values[key] = typeof input[key] === 'string' ? input[key].trim() : '';

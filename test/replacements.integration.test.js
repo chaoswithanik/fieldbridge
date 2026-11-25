@@ -106,11 +106,13 @@ else {
     requested = '1000.000',
     quantities = ['600.000', '400.000'],
     reject = true,
+    crop,
   } = {}) {
-    const cropName = `বিকল্প ধান ${++index}`,
+    const cropName = crop?.cropName ?? `বিকল্প ধান ${++index}`,
       requirement = await models.PurchaseRequirement.create({
         buyerId: actors.buyer.id,
         cropName,
+        ...crop,
         quantity: requested,
         unit: 'kg',
         deliveryAddress: 'অর্ডারের পুরোনো ডেলিভারি গুদাম',
@@ -120,6 +122,7 @@ else {
       quantities.map((quantity, i) => ({
         ...fixture,
         cropName,
+        ...crop,
         quantity,
         farmerId: actors[`f${i + 1}`].id,
       })),
@@ -539,5 +542,26 @@ else {
     assert.deepEqual((await request(`${path(pending)}/listings`)).data.listings, []);
     const empty = await setup();
     assert.deepEqual((await request(path(empty))).data.recommendations, []);
+  });
+
+  test('replacement listings and quotes honor the original variety after the demand is deleted', async () => {
+    const { cropSelection } = await import('../shared/crop-catalog.js');
+    const red = cropSelection('potato', 'red');
+    const set = await setup({ crop: red });
+    await set.requirement.destroy();
+    const [eligible, other] = await models.CropListing.bulkCreate(
+      [red, cropSelection('potato', 'white')].map((crop) => ({
+        ...fixture, ...crop, farmerId: actors.f3.id, quantity: '400',
+      })),
+    );
+    const listings = await request(`${path(set)}/listings`);
+    assert.deepEqual(listings.data.listings.map((row) => row.id), [eligible.id]);
+    const rejected = await request(`${path(set)}/quote`, {
+      method: 'POST', body: { listingIds: [other.id] },
+    });
+    assert.equal(rejected.status, 409);
+    const order = await confirm(set, [eligible]);
+    assert.equal(order.varietyId, 'red');
+    assert.equal(order.replacementNeededQuantity, '0.000');
   });
 }

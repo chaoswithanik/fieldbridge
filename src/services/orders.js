@@ -1,3 +1,4 @@
+import { matchingCropWhere } from '../lib/crop-identity.js';
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import { Op, Transaction } from 'sequelize';
 import { sequelize } from '../config/database.js';
@@ -62,7 +63,8 @@ async function selectionPreview(buyerId, input, transaction) {
     farmers = new Map();
   // All inventory writers acquire listing locks in the same UUID order.
   for (const id of selected.listingIds) {
-    const row = await models.CropListing.findByPk(id, {
+    const row = await models.CropListing.findOne({
+      where: { id, ...matchingCropWhere(requirement) },
       transaction,
       lock: transaction.LOCK.UPDATE,
     });
@@ -71,16 +73,6 @@ async function selectionPreview(buyerId, input, transaction) {
       row.status !== 'active' ||
       quantity(row.quantity) <= 0n ||
       row.unit !== requirement.unit
-    )
-      throw stale();
-    // Compare crop names using exactly the same DB collation as matching.
-    if (
-      !(await models.CropListing.findOne({
-        where: { id, cropName: requirement.cropName },
-        attributes: ['id'],
-        transaction,
-        lock: transaction.LOCK.UPDATE,
-      }))
     )
       throw stale();
     if (!farmers.has(row.farmerId)) {
@@ -125,6 +117,8 @@ async function selectionPreview(buyerId, input, transaction) {
   });
   const profile = await models.BuyerProfile.findByPk(buyerId, { transaction });
   const snapshot = {
+    cropId: requirement.cropId,
+    varietyId: requirement.varietyId,
     cropName: requirement.cropName,
     unit: requirement.unit,
     requestedQuantity: requirement.quantity,
@@ -169,6 +163,8 @@ export function publicPreview(preview) {
 }
 export function orderItemSnapshot(row, farmer) {
   return {
+    cropId: row.cropId,
+    varietyId: row.varietyId,
     cropName: row.cropName,
     unit: row.unit,
     pricePerUnit: row.pricePerUnit,

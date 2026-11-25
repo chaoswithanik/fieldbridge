@@ -1,3 +1,4 @@
+import { CropSuggestions } from '../components/CropPicker.jsx';
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import {
@@ -93,14 +94,16 @@ export default function Marketplace() {
         <div className="market-search-main">
           <FormField
             name="q"
+            list="market-crop-suggestions"
             label="ফসলের নাম"
-            placeholder="যেমন: আলু, ধান, টমেটো"
+            placeholder="বাংলা বা ইংরেজিতে খুঁজুন"
             value={form.q}
             onChange={change}
             maxLength={100}
             error={fieldErrors.q}
             optional
           />
+          <CropSuggestions id="market-crop-suggestions" query={form.q} />
           <FormField
             name="district"
             label="জেলা"

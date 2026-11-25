@@ -1,3 +1,4 @@
+import { matchingCropWhere } from '../lib/crop-identity.js';
 import { createHash } from 'node:crypto';
 import { Op, Transaction, fn, col, where as sqlWhere } from 'sequelize';
 import { sequelize } from '../config/database.js';
@@ -41,6 +42,8 @@ const changed = () =>
 const candidateAttributes = [
   'id',
   'farmerId',
+  'cropId',
+  'varietyId',
   'cropName',
   'quantity',
   'unit',
@@ -78,7 +81,7 @@ async function context(buyerId, id, transaction, write = false) {
 }
 function candidateWhere(ctx) {
   return {
-    cropName: ctx.order.snapshot.cropName,
+    ...matchingCropWhere(ctx.order.snapshot),
     unit: ctx.order.snapshot.unit,
     status: 'active',
     quantity: { [Op.gt]: 0 },

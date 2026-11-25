@@ -1,3 +1,4 @@
+import { matchingCropWhere } from '../lib/crop-identity.js';
 import { Op, Transaction } from 'sequelize';
 import { sequelize } from '../config/database.js';
 import { models } from '../models/index.js';
@@ -31,13 +32,15 @@ export async function individualRequirementMatches(buyerId, id, query = {}) {
       const requirement = await findOwnRequirement(buyerId, id, transaction);
       const { rows, count } = await models.CropListing.findAndCountAll({
         where: {
-          cropName: requirement.cropName,
+          ...matchingCropWhere(requirement),
           unit: requirement.unit,
           status: 'active',
           quantity: { [Op.gte]: requirement.quantity, [Op.gt]: 0 },
         },
         attributes: [
           'id',
+          'cropId',
+          'varietyId',
           'cropName',
           'quantity',
           'unit',
@@ -84,7 +87,7 @@ export async function collectiveRequirementMatches(buyerId, id, query = {}) {
       const target = scaledDecimal(requirement.quantity, 3);
       const listings = await models.CropListing.findAll({
         where: {
-          cropName: requirement.cropName,
+          ...matchingCropWhere(requirement),
           unit: requirement.unit,
           status: 'active',
           quantity: { [Op.gt]: 0 },
@@ -92,6 +95,8 @@ export async function collectiveRequirementMatches(buyerId, id, query = {}) {
         attributes: [
           'id',
           'farmerId',
+          'cropId',
+          'varietyId',
           'cropName',
           'quantity',
           'unit',
