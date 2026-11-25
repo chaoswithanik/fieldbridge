@@ -1,3 +1,4 @@
+import { maxListingPhotoBytes } from '../../../shared/listing-photos.js';
 import CropPicker from '../components/CropPicker.jsx';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
@@ -137,10 +138,10 @@ function ListingFormContent({ id }) {
       selected.some(
         (file) =>
           !['image/jpeg', 'image/png', 'image/webp'].includes(file.type) ||
-          file.size > 2 * 1024 * 1024,
+          file.size > maxListingPhotoBytes,
       )
     )
-      problem = 'JPG, PNG অথবা WebP ছবি দিন; প্রতিটি সর্বোচ্চ ২ মেগাবাইট।';
+      problem = 'JPG, PNG অথবা WebP ছবি দিন; প্রতিটি সর্বোচ্চ ১০ মেগাবাইট।';
     setFields((current) => ({ ...current, photos: problem || undefined }));
     if (!problem)
       setPhotos((current) => [
@@ -383,7 +384,7 @@ function ListingFormContent({ id }) {
                 </span>
               </legend>
               <p className="field-hint">
-                নিজের ফসলের ১–৫টি পরিষ্কার ছবি দিন। JPG, PNG বা WebP; প্রতিটি সর্বোচ্চ ২ মেগাবাইট।
+                নিজের ফসলের ১–৫টি পরিষ্কার ছবি দিন। JPG, PNG বা WebP; প্রতিটি সর্বোচ্চ ১০ মেগাবাইট।
                 প্রথম ছবিটি প্রধান ছবি হবে।
               </p>
               <div className="listing-photo-grid">

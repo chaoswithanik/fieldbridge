@@ -28,7 +28,7 @@ export async function saveListingPhotos(files) {
           .toBuffer();
       } catch {
         throw new AppError(422, 'ছবিটি পড়া যাচ্ছে না।', {
-          photos: 'সঠিক JPG, PNG অথবা WebP ছবি দিন (প্রতিটি সর্বোচ্চ ২ মেগাবাইট)।',
+          photos: 'সঠিক JPG, PNG অথবা WebP ছবি দিন (প্রতিটি সর্বোচ্চ ১০ মেগাবাইট)।',
         });
       }
       const filename = `${randomUUID()}.webp`;

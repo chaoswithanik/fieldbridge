@@ -5,7 +5,7 @@ import { sequelize } from '../config/database.js';
 import { env } from '../config/env.js';
 import { models } from '../models/index.js';
 import { AppError } from '../lib/errors.js';
-import { scaledDecimal, decimalString, requirementLotQuantities } from '../lib/collective-matching.js';
+import { scaledDecimal, decimalString, requirementLotQuantities, minimumDemandSupply } from '../lib/collective-matching.js';
 import {
   orderSelection,
   orderSubmission,
@@ -98,7 +98,8 @@ async function selectionPreview(buyerId, input, transaction) {
   const target = quantity(requirement.quantity);
   const amounts = requirementLotQuantities(rows, requirement.quantity);
   const total = [...amounts.values()].reduce((sum, amount) => sum + amount, 0n);
-  if (total * 5n > target * 6n || [...amounts.values()].includes(0n)) throw stale();
+  if (total < minimumDemandSupply(target) || total * 5n > target * 6n || [...amounts.values()].includes(0n))
+    throw stale();
   const items = rows.map((row) => {
     const farmer = farmers.get(row.farmerId);
     const amount = decimalString(amounts.get(row.id), 3);

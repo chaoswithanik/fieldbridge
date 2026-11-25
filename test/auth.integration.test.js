@@ -789,18 +789,18 @@ if (process.env.AUTH_INTEGRATION !== '1') {
       ).status,
       422,
     );
-    assert.equal(
-      (
-        await cropRequest('', {
-          method: 'POST',
-          body: await cropForm(crop, { images: [Buffer.alloc(2 * 1024 * 1024 + 1)] }),
-        })
-      ).status,
-      422,
-    );
+    // Pad a decodable PNG so only its byte length differs across the boundary.
+    const atLimit = Buffer.alloc(10 * 1024 * 1024);
+    image.copy(atLimit);
+    const oversized = await cropRequest('', {
+      method: 'POST',
+      body: await cropForm(crop, { images: [Buffer.concat([atLimit, Buffer.alloc(1)])] }),
+    });
+    assert.equal(oversized.status, 422);
+    assert.match(oversized.data.fields.photos, /১০ মেগাবাইট/);
     const result = await cropRequest('', {
       method: 'POST',
-      body: await cropForm(crop, { images: [image, image] }),
+      body: await cropForm(crop, { images: [atLimit, image] }),
     });
     assert.equal(result.status, 201, JSON.stringify(result.data));
     cropListing = result.data.listing;

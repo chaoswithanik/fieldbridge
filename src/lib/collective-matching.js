@@ -11,6 +11,11 @@ export function decimalString(value, places) {
   const digits = value.toString().padStart(places + 1, '0');
   return `${digits.slice(0, -places)}.${digits.slice(-places)}`;
 }
+// Quantities are thousandths of a unit. Round the inclusive 80% floor up.
+export function minimumDemandSupply(target) {
+  return (target * 4n + 4n) / 5n;
+}
+
 const compare = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 const defaultFactors = ['availableDate', 'harvestDate', 'cost', 'farmerCount', 'proximity'];
 const sortFactors = {
@@ -103,12 +108,18 @@ export async function bestCollectiveCombinations(
   listings,
   requested,
   sort = 'recommended',
-  { proximity = administrativeProximity, timeoutMs = 3000, prioritizeSingleFarm = false } = {},
+  { proximity = administrativeProximity, timeoutMs = 3000, prioritizeSingleFarm = false, minimumPartialQuantity } = {},
 ) {
   const target = scaledDecimal(requested, 3),
     maximum = (target * 6n) / 5n;
   const stock = orderedLots(listings).filter((row) => row.quantity > 0n);
   const wholeLots = stock.filter((row) => row.quantity <= maximum);
+  const uniqueFarms = new Set(wholeLots.map((row) => row.listing.farmerId)).size === wholeLots.length;
+  const idsAscending = wholeLots.every((row, i) => !i || wholeLots[i - 1].listing.id < row.listing.id);
+  const cheapestLotCost = wholeLots.reduce((lowest, row) => {
+    const cost = (row.quantity * row.price + 500n) / 1000n;
+    return lowest === null || cost < lowest ? cost : lowest;
+  }, null);
   const comparator = combinationComparator(sort),
     results = [],
     started = performance.now();
@@ -116,7 +127,7 @@ export async function bestCollectiveCombinations(
   const phases = [
     [0, target, target],
     [1, target + 1n, maximum],
-    [2, 1n, target - 1n],
+    [2, minimumPartialQuantity ?? minimumDemandSupply(target), target - 1n],
   ];
   if (prioritizeSingleFarm) phases.unshift([0, target, target, true]);
   for (const [category, minimum, upper, singleFarmOnly] of phases) {
@@ -185,7 +196,22 @@ export async function bestCollectiveCombinations(
         proximity: { sum: 0, pairs: 1 },
         key: '',
       };
-      if (phase.length === 5 - results.length && comparator(bound, phase.at(-1)) > 0) continue;
+      if (phase.length === 5 - results.length) {
+        if (category === 2) {
+          // Whole lots are sorted largest first. Any eligible completion must
+          // add at least this many lots, each costing at least the cheapest lot.
+          if (quantity < minimum) {
+            const largestNext = rows[index + 1].quantity;
+            const needed = (minimum - quantity + largestNext - 1n) / largestNext;
+            bound.cost += needed * cheapestLotCost;
+            if (uniqueFarms) bound.farmerCount += Number(needed);
+          }
+          // With IDs already in ascending order this prefix is a lower bound
+          // on the final sorted key, even if several more lots are needed.
+          if (idsAscending) bound.key = [...selected, index].map((i) => rows[i].listing.id).join(':');
+        }
+        if (comparator(bound, phase.at(-1)) > 0) continue;
+      }
       selected.push(index);
       farmers.set(row.listing.farmerId, (farmers.get(row.listing.farmerId) || 0) + 1);
       // A complete one-farm selection has already competed in the priority phase.

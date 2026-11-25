@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import multer from 'multer';
+import { maxListingPhotoBytes } from '../../shared/listing-photos.js';
 import { rateLimit } from 'express-rate-limit';
 import { requireRole } from '../middleware/auth.js';
 import { AppError } from '../lib/errors.js';
@@ -21,7 +22,7 @@ farmerRouter.use(...requireRole('farmer'));
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 2 * 1024 * 1024, files: 5, fields: 20, fieldSize: 8192, parts: 25 },
+  limits: { fileSize: maxListingPhotoBytes, files: 5, fields: 20, fieldSize: 8192, parts: 25 },
   fileFilter(_req, file, callback) {
     callback(
       ['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype)
@@ -38,7 +39,7 @@ function photos(req, res, next) {
       return next(
         new AppError(422, 'ছবি বা তথ্য আপলোড করা যায়নি।', {
           photos:
-            'সর্বোচ্চ ৫টি ছবি দিন; প্রতিটি সর্বোচ্চ ২ মেগাবাইট। ফর্মের তথ্যও নির্ধারিত সীমার মধ্যে রাখুন।',
+            'সর্বোচ্চ ৫টি ছবি দিন; প্রতিটি সর্বোচ্চ ১০ মেগাবাইট। ফর্মের তথ্যও নির্ধারিত সীমার মধ্যে রাখুন।',
         }),
       );
     next(error);

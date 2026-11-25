@@ -38,6 +38,21 @@ test('collective matching classifies exact, inclusive 20% excess and partial wit
   );
 });
 
+test('partial supply starts at 80% of demand across all selected lots', async () => {
+  for (const [requested, lots, expected] of [
+    ['100', ['79.999'], []],
+    ['100', ['80'], [80000n]],
+    ['100', ['35', '45'], [80000n]],
+    ['1.001', ['0.800'], []],
+    ['1.001', ['0.801'], [801n]],
+  ]) {
+    const matches = await bestCollectiveCombinations(lots.map((q, i) => row(i, q)), requested,
+      'recommended', { prioritizeSingleFarm: true });
+    assert.deepEqual(matches.map((match) => match.quantity), expected);
+    assert(matches.every((match) => match.category === 2));
+  }
+});
+
 test('collective results may use one farmer and count repeat listings only once per farmer', async () => {
   const singleFarmer = await bestCollectiveCombinations(
     [row(1, 60), row(2, 40, { farmerId: 'farmer-1' })],
@@ -78,7 +93,7 @@ test('dates describe when all members are ready, default compares cost before fa
   assert.equal(result[0].availableDate, '2026-12-01');
   assert.equal(result[0].category, 0);
   const price = await bestCollectiveCombinations(
-    [row(1, 60), row(2, 40), row(3, 1, { pricePerUnit: '0.01' })],
+    [row(1, 60), row(2, 40), row(3, 45, { pricePerUnit: '0.01' })],
     '100',
     'price_asc',
   );
@@ -123,7 +138,7 @@ test('bounded search agrees with exhaustive subsets for all sorts, including adm
       const members = rows.filter((_, i) => mask & (1 << i)),
         quantity = members.reduce((s, r) => s + Number(r.quantity), 0);
       const farmers = new Set(members.map((r) => r.farmerId)).size;
-      if (quantity > 12) continue;
+      if (quantity < 8 || quantity > 12) continue;
       let pairs = 0,
         spread = 0;
       for (let i = 0; i < members.length; i++)

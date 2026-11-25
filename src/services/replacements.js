@@ -140,7 +140,10 @@ export async function replacementRecommendations(buyerId, orderId, query = {}) {
       })
       .sort(combinationComparator(sort))
       .slice(0, 5);
-    const combined = await bestCollectiveCombinations(rows, decimalString(ctx.remaining, 3), sort);
+    // Replacing previously ordered stock can cover any positive part of the remaining gap.
+    const combined = await bestCollectiveCombinations(rows, decimalString(ctx.remaining, 3), sort, {
+      minimumPartialQuantity: 1n,
+    });
     const matches = [...singles, ...combined].sort(combinationComparator(sort)).slice(0, 5);
     return {
       ...publicContext(ctx),

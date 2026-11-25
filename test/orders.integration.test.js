@@ -588,6 +588,7 @@ if (process.env.AUTH_INTEGRATION !== '1') {
 
   test('partial and exactly 20% excess orders reserve complete collective lots while excessive and inactive selections fail', async () => {
     for (const [quantities, total] of [
+      [['350.000', '450.000'], '800.000'],
       [['600.000', '300.000'], '900.000'],
       [['600.000', '600.000'], '1200.000'],
     ]) {
@@ -599,19 +600,14 @@ if (process.env.AUTH_INTEGRATION !== '1') {
         assert.equal(row.quantity, '0.000');
       }
     }
-    const excessive = await setup(['600.000', '600.001'], '1000.000');
-    assert.equal(
-      (
-        await request('orders/quote', {
-          method: 'POST',
-          body: {
-            requirementId: excessive.requirement.id,
-            listingIds: excessive.listings.map((row) => row.id),
-          },
-        })
-      ).status,
-      409,
-    );
+    for (const lots of [['350.000', '449.999'], ['600.000', '600.001']]) {
+      const set = await setup(lots, '1000.000');
+      const quote = await request('orders/quote', {
+        method: 'POST',
+        body: { requirementId: set.requirement.id, listingIds: set.listings.map((row) => row.id) },
+      });
+      assert.equal(quote.status, 409);
+    }
     const inactive = await setup();
     await inactive.requirement.update({ status: 'inactive' });
     assert.equal(

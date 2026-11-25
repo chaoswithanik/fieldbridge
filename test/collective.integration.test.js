@@ -137,14 +137,14 @@ if (process.env.AUTH_INTEGRATION !== '1') {
   test('matching ranks a full single-farm supply before whole-lot exact, excess and partial alternatives', async () => {
     const result = await request();
     assert.equal(result.status, 200, JSON.stringify(result.data));
-    assert.equal(result.data.combinations.length, 5);
+    assert.equal(result.data.combinations.length, 4);
     assert.deepEqual(
       result.data.combinations.map((c) => c.fulfilment),
-      ['exact', 'exact', 'excess', 'partial', 'partial'],
+      ['exact', 'exact', 'excess', 'partial'],
     );
     assert.deepEqual(
       result.data.combinations.map((c) => c.quantity),
-      ['100.000', '100.000', '110.000', '50.000', '60.000'],
+      ['100.000', '100.000', '110.000', '90.000'],
     );
     const [single, exact, extra, partial] = result.data.combinations;
     assert.equal(single.farmerCount, 1);
@@ -154,7 +154,7 @@ if (process.env.AUTH_INTEGRATION !== '1') {
     assert.equal(exact.availableDate, '2026-11-26');
     assert.equal(exact.totalCost, '2400.00');
     assert.equal(extra.excessQuantity, '10.000');
-    assert.equal(partial.shortageQuantity, '50.000');
+    assert.equal(partial.shortageQuantity, '10.000');
     assert.equal(extra.proximity.differentDistrictPairs, 1);
     assert(
       result.data.combinations
@@ -227,7 +227,7 @@ if (process.env.AUTH_INTEGRATION !== '1') {
   test('collective matches follow stock and requirement changes without spending edits or changing version', async () => {
     await listings[1].update({ quantity: '0.000' });
     let result = await request();
-    assert.equal(result.data.combinations.length, 4);
+    assert.equal(result.data.combinations.length, 2);
     assert.equal(result.data.combinations[0].fulfilment, 'exact');
     assert.equal(result.data.combinations[1].fulfilment, 'excess');
     await requirement.update({
@@ -238,7 +238,7 @@ if (process.env.AUTH_INTEGRATION !== '1') {
     });
     result = await request();
     assert.equal(result.data.combinations[0].quantity, '200.000');
-    assert.equal(result.data.combinations[1].fulfilment, 'partial');
+    assert.equal(result.data.combinations.length, 1);
     assert.equal(result.data.requirement.quantity, '200.000');
     assert.equal(result.data.requirement.editCount, 2);
     await requirement.reload();
@@ -246,7 +246,7 @@ if (process.env.AUTH_INTEGRATION !== '1') {
     assert.equal(requirement.editCount, 2);
     await listings[0].update({ status: 'inactive' });
     result = await request();
-    assert.equal(result.data.combinations.length, 2);
+    assert.equal(result.data.combinations.length, 1);
     assert.equal(result.data.combinations[0].fulfilment, 'exact');
     assert.equal(result.data.combinations[0].farmerCount, 1);
     await listings[0].update({ status: 'active' });

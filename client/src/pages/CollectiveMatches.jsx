@@ -107,7 +107,7 @@ function CollectiveContent() {
                     ? 'পরিমাণে সঠিক মিল'
                     : combination.fulfilment === 'excess'
                       ? '২০% সীমার মধ্যে'
-                      : 'পুরো পরিমাণ পাওয়া যাচ্ছে না'}
+                      : 'চাহিদার অন্তত ৮০%'}
                 </span>
               </div>
               <dl className="combination-figures">
@@ -219,7 +219,7 @@ function CollectiveContent() {
             <Search size={30} aria-hidden="true" />
           </span>
           <h2>উপযুক্ত সরবরাহের সমন্বয় পাওয়া যায়নি</h2>
-          <p>এই চাহিদার ফসল ও এককের জন্য উপযুক্ত মজুত পাওয়া যায়নি।</p>
+          <p>এই ফসল ও এককের জন্য চাহিদার অন্তত ৮০% মেটাতে পারে এমন সরবরাহ পাওয়া যায়নি।</p>
           <button type="button" className="button button-primary" onClick={reload}>
             <RefreshCw size={16} aria-hidden="true" /> আবার খুঁজুন
           </button>
