@@ -1,3 +1,4 @@
+import LocationFields from '../components/LocationFields.jsx';
 import { CropSuggestions } from '../components/CropPicker.jsx';
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
@@ -104,25 +105,11 @@ export default function Marketplace() {
             optional
           />
           <CropSuggestions id="market-crop-suggestions" query={form.q} />
-          <FormField
-            name="district"
-            label="জেলা"
-            placeholder="যেমন: বগুড়া"
-            value={form.district}
-            onChange={change}
-            maxLength={80}
-            error={fieldErrors.district}
+          <LocationFields
+            values={form}
+            errors={fieldErrors}
             optional
-          />
-          <FormField
-            name="upazila"
-            label="উপজেলা"
-            placeholder="যেমন: শিবগঞ্জ"
-            value={form.upazila}
-            onChange={change}
-            maxLength={80}
-            error={fieldErrors.upazila}
-            optional
+            onChange={(location) => setForm((current) => ({ ...current, ...location }))}
           />
           <FormField
             name="unit"

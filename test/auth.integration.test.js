@@ -1128,6 +1128,8 @@ if (process.env.AUTH_INTEGRATION !== '1') {
     assert.equal(result.status, 200, JSON.stringify(result.data));
     assert.equal(result.data.total, 1);
     assert.equal(result.data.listings[0].id, marketRows[0].id);
+    assert.equal((await get({ district: 'Rangpur', upazila: 'Mitha' })).data.total, 3);
+    assert.equal((await get({ district: 'Dhaka', upazila: 'Mithapukur' })).data.total, 0);
     assert.equal((await get({ q: '%_' })).data.total, 1, 'search wildcards must be literal');
     assert.equal((await get({ q: "' OR 1=1 --" })).data.total, 0);
     assert.equal(

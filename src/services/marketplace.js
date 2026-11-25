@@ -1,3 +1,4 @@
+import { listingLocationConditions } from '../lib/location.js';
 import { resolveCropName, searchCropCatalog } from '../../shared/crop-catalog.js';
 import { Op, fn, col, where as sqlWhere } from 'sequelize';
 import { models } from '../models/index.js';
@@ -79,7 +80,7 @@ export async function searchMarketListings(user, query) {
   const full = Boolean(canViewMarketDetails(user));
   const values = marketplaceQuery(query, full);
   const where = { ...activeWhere };
-  const conditions = [];
+  const conditions = listingLocationConditions(values);
   if (values.q) {
     const exact = resolveCropName(values.q);
     const selections = exact ? [exact] : searchCropCatalog(values.q);
@@ -89,14 +90,6 @@ export async function searchMarketListings(user, query) {
       ...selections.map(({ cropId, varietyId }) => ({ cropId, ...(varietyId ? { varietyId } : {}) })),
     ] });
   }
-  for (const [key, column] of [
-    ['district', 'district'],
-    ['upazila', 'upazila'],
-  ])
-    if (values[key])
-      conditions.push(
-        sqlWhere(fn('LOCATE', values[key], col(`CropListing.${column}`)), { [Op.gt]: 0 }),
-      );
   if (conditions.length) where[Op.and] = conditions;
   if (values.unit) where.unit = values.unit;
   for (const [field, min, max] of [

@@ -1,3 +1,4 @@
+import LocationFields from '../components/LocationFields.jsx';
 import { useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { Camera, Check, LoaderCircle, ShieldCheck, Sprout, X } from 'lucide-react';
@@ -243,8 +244,14 @@ export default function Register() {
           <fieldset disabled={busy}>
             <legend>খামারের অবস্থান</legend>
             <div className="form-grid">
-              {field('district', 'জেলা', { maxLength: 80, placeholder: 'যেমন: বগুড়া' })}
-              {field('upazila', 'উপজেলা', { maxLength: 80, placeholder: 'যেমন: শিবগঞ্জ' })}
+              <LocationFields
+                values={form}
+                errors={fields}
+                onChange={(location) => {
+                  setForm((current) => ({ ...current, ...location }));
+                  setFields((current) => ({ ...current, district: undefined, upazila: undefined }));
+                }}
+              />
               <div className="form-full">
                 {field('village', 'গ্রাম', { maxLength: 100, placeholder: 'গ্রামের নাম' })}
               </div>

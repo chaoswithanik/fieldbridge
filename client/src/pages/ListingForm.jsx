@@ -1,3 +1,4 @@
+import LocationFields from '../components/LocationFields.jsx';
 import { maxListingPhotoBytes } from '../../../shared/listing-photos.js';
 import CropPicker from '../components/CropPicker.jsx';
 import { useEffect, useRef, useState } from 'react';
@@ -329,21 +330,13 @@ function ListingFormContent({ id }) {
                 আপনার প্রোফাইলের ঠিকানা দেওয়া আছে। এই ফসলের অবস্থান আলাদা হলে বদলে দিন।
               </p>
               <div className="listing-fields">
-                <FormField
-                  name="district"
-                  label="জেলা"
-                  value={form.district}
-                  onChange={change}
-                  maxLength={80}
-                  error={fields.district}
-                />
-                <FormField
-                  name="upazila"
-                  label="উপজেলা"
-                  value={form.upazila}
-                  onChange={change}
-                  maxLength={80}
-                  error={fields.upazila}
+                <LocationFields
+                  values={form}
+                  errors={fields}
+                  onChange={(location) => {
+                    setForm((current) => ({ ...current, ...location }));
+                    setFields((current) => ({ ...current, district: undefined, upazila: undefined }));
+                  }}
                 />
                 <div className="form-full">
                   <FormField

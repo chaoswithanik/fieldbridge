@@ -13,7 +13,6 @@ export async function editFarmerProfile(userId, input, file) {
       Object.keys(input).some((key) => !allowed.includes(key)) ||
       !/^[a-f0-9]{64}$/.test(input.version || ''))
     throw new AppError(422, 'প্রোফাইলের নির্ধারিত তথ্য দিয়ে আবার চেষ্টা করুন।');
-  const { fullName, email, ...farm } = validateFarmerProfile(input);
   const avatarBuffer = await prepareAvatar(file);
   let addedPhoto;
   let oldPhoto;
@@ -31,6 +30,7 @@ export async function editFarmerProfile(userId, input, file) {
       user.farmerProfile = profile;
       if (publicUser(user).farmerProfile.version !== input.version)
         throw new AppError(409, 'প্রোফাইলের তথ্য বদলেছে। সর্বশেষ তথ্য এনে আবার সম্পাদনা করুন।');
+      const { fullName, email, ...farm } = validateFarmerProfile(input, profile);
       oldPhoto = profile.avatarFilename;
       addedPhoto = await saveAvatar(avatarBuffer);
       await user.update({ fullName, email }, { transaction });

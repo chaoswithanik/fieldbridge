@@ -1,3 +1,4 @@
+import LocationFields from './LocationFields.jsx';
 import { useEffect, useRef, useState } from 'react';
 import { LoaderCircle, Save } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -79,8 +80,14 @@ export default function FarmerProfileForm({ user, onCancel, onSaved }) {
             <div className="form-full">
               {field('farmName', 'খামারের নাম', { maxLength: 120, optional: true })}
             </div>
-            {field('district', 'জেলা', { maxLength: 80 })}
-            {field('upazila', 'উপজেলা', { maxLength: 80 })}
+            <LocationFields
+              values={form}
+              errors={fields}
+              onChange={(location) => {
+                setForm((current) => ({ ...current, ...location }));
+                setFields((current) => ({ ...current, district: undefined, upazila: undefined }));
+              }}
+            />
             {field('village', 'গ্রাম', { maxLength: 100 })}
             <FormField
               name="photo"

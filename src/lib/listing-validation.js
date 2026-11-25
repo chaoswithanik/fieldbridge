@@ -1,3 +1,4 @@
+import { validateLocation } from './location.js';
 import { validateCrop } from './crop-identity.js';
 import { AppError } from './errors.js';
 import { normalizeDigits } from './validation.js';
@@ -19,10 +20,8 @@ function validDate(value) {
 
 export function validateListing(input = {}, { soldOut = false, existing } = {}) {
   const fields = {};
-  const values = validateCrop(input, fields, existing);
+  const values = { ...validateCrop(input, fields, existing), ...validateLocation(input, fields, existing) };
   for (const [key, label, min, max] of [
-    ['district', 'জেলা', 2, 80],
-    ['upazila', 'উপজেলা', 2, 80],
     ['farmAddress', 'খামারের ঠিকানা', 5, 500],
     ['description', 'বিবরণ', 5, 2000],
   ]) {

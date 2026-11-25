@@ -1,3 +1,4 @@
+import LocationFields from '../components/LocationFields.jsx';
 import { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { LoaderCircle, RefreshCw, UsersRound, Phone, MapPin, X, Search } from 'lucide-react';
@@ -304,24 +305,11 @@ function ReplacementContent() {
                 setParams(next);
               }}
             >
-              <label>
-                জেলা
-                <input
-                  name="district"
-                  value={filters.district}
-                  maxLength={80}
-                  onChange={(event) => setFilters({ ...filters, district: event.target.value })}
-                />
-              </label>
-              <label>
-                উপজেলা
-                <input
-                  name="upazila"
-                  value={filters.upazila}
-                  maxLength={80}
-                  onChange={(event) => setFilters({ ...filters, upazila: event.target.value })}
-                />
-              </label>
+              <LocationFields
+                values={filters}
+                optional
+                onChange={(location) => setFilters((current) => ({ ...current, ...location }))}
+              />
               <label>
                 বিজ্ঞাপন সাজান
                 <select

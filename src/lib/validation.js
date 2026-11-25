@@ -1,3 +1,4 @@
+import { validateLocation } from './location.js';
 import { AppError } from './errors.js';
 
 export function normalizeDigits(value) {
@@ -20,12 +21,10 @@ export function validPhone(value) {
   return phone;
 }
 
-function farmerDetails(input, fields) {
-  const values = {};
+function farmerDetails(input, fields, existing) {
+  const values = validateLocation(input, fields, existing);
   for (const [key, label, min, max] of [
     ['fullName', 'পুরো নাম', 2, 100],
-    ['district', 'জেলা', 2, 80],
-    ['upazila', 'উপজেলা', 2, 80],
     ['village', 'গ্রাম', 2, 100],
     ['farmAddress', 'খামারের ঠিকানা', 5, 500],
   ]) {
@@ -46,9 +45,9 @@ function farmerDetails(input, fields) {
   return values;
 }
 
-export function validateFarmerProfile(input = {}) {
+export function validateFarmerProfile(input = {}, existing) {
   const fields = {};
-  const values = farmerDetails(input, fields);
+  const values = farmerDetails(input, fields, existing);
   if (Object.keys(fields).length)
     throw new AppError(422, 'চিহ্নিত তথ্যগুলো ঠিক করে আবার চেষ্টা করুন।', fields);
   return values;

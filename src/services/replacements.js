@@ -1,6 +1,7 @@
+import { listingLocationConditions } from '../lib/location.js';
 import { matchingCropWhere } from '../lib/crop-identity.js';
 import { createHash } from 'node:crypto';
-import { Op, Transaction, fn, col, where as sqlWhere } from 'sequelize';
+import { Op, Transaction } from 'sequelize';
 import { sequelize } from '../config/database.js';
 import { models } from '../models/index.js';
 import { AppError } from '../lib/errors.js';
@@ -159,12 +160,7 @@ export async function replacementListings(buyerId, orderId, input = {}) {
     if (!ctx.remaining)
       return { ...publicContext(ctx), listings: [], total: 0, page: query.page, pages: 1 };
     const where = candidateWhere(ctx),
-      conditions = [];
-    for (const key of ['district', 'upazila'])
-      if (query[key])
-        conditions.push(
-          sqlWhere(fn('LOCATE', query[key], col(`CropListing.${key}`)), { [Op.gt]: 0 }),
-        );
+      conditions = listingLocationConditions(query);
     if (conditions.length) where[Op.and] = conditions;
     const { rows, count } = await models.CropListing.findAndCountAll({
       where,
