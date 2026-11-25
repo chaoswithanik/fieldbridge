@@ -19,7 +19,7 @@
   border: 1px solid var(--color-outline-variant);
   border-radius: 0.875rem;
   padding: 1.25rem;
-  background: white;
+  background: var(--color-surface-container-lowest);
 }
 .requirement-card-heading {
   display: flex;
@@ -129,7 +129,7 @@
 .requirement-quota-card {
   border: 1px solid var(--color-outline-variant);
   border-radius: 0.875rem;
-  background: white;
+  background: var(--color-surface-container-lowest);
   padding: 1.25rem;
 }
 .requirement-quota-card h2 {

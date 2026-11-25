@@ -50,7 +50,7 @@
   gap: 0.5rem;
   min-height: 44px;
   border: 1px solid var(--color-outline-variant);
-  background: white;
+  background: var(--color-surface-container-lowest);
   border-radius: 0.5rem;
   padding: 0.5rem 0.875rem;
   font-size: 0.875rem;
@@ -58,7 +58,7 @@
 }
 .listing-filters button[aria-pressed='true'] {
   background: var(--color-primary);
-  color: white;
+  color: var(--color-on-primary);
   border-color: var(--color-primary);
 }
 .listing-filters button span {
@@ -87,7 +87,7 @@
   gap: 1rem;
 }
 .crop-card {
-  background: white;
+  background: var(--color-surface-container-lowest);
   border: 1px solid var(--color-outline-variant);
   border-radius: 1rem;
   overflow: hidden;
@@ -144,7 +144,7 @@
   bottom: 0.625rem;
   right: 0.625rem;
   background: var(--color-primary);
-  color: white;
+  color: var(--color-on-primary);
   border-radius: 0.375rem;
   padding: 0.15rem 0.5rem;
   font-size: 0.8125rem;
@@ -243,7 +243,7 @@
 .listing-empty {
   border: 1px dashed var(--color-outline-variant);
   border-radius: 1rem;
-  background: white;
+  background: var(--color-surface-container-lowest);
   padding: 2.5rem 1rem;
   display: flex;
   flex-direction: column;
@@ -287,7 +287,7 @@
   min-width: 0;
 }
 .listing-form-card {
-  background: white;
+  background: var(--color-surface-container-lowest);
   border: 1px solid var(--color-outline-variant);
   border-radius: 0.875rem;
   padding: 1.125rem 1.25rem;
@@ -326,12 +326,10 @@
   border-radius: 0.5rem;
   padding: 0.5rem 2.5rem 0.5rem 0.75rem;
   color: var(--color-on-surface);
-  background: white;
+  background: var(--color-surface-container-lowest);
   font: inherit;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23424843' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 0.75rem center;
+  appearance: auto;
+  padding-inline-end: .75rem;
 }
 .form-field select:focus-visible {
   outline: 2px solid var(--color-primary);
@@ -390,7 +388,7 @@
   bottom: 0;
   left: 0;
   padding: 0.15rem 0.5rem;
-  color: white;
+  color: var(--color-on-primary);
   background: var(--color-primary);
   font-size: 0.8125rem;
   border-top-right-radius: 0.375rem;
@@ -403,7 +401,7 @@
   height: 36px;
   display: grid;
   place-items: center;
-  background: white;
+  background: var(--color-surface-container-lowest);
   color: var(--color-error);
   border-radius: 0.375rem;
   box-shadow: 0 1px 4px rgb(0 0 0 / 0.15);
@@ -428,8 +426,8 @@
   font-size: 0.8125rem;
 }
 .listing-publish-card {
-  background: var(--color-primary);
-  color: white;
+  background: light-dark(var(--color-primary), var(--color-primary-fixed));
+  color: light-dark(var(--color-on-primary), var(--color-on-primary-fixed));
   border-radius: 0.875rem;
   padding: 1.25rem;
   display: grid;
@@ -440,7 +438,7 @@
   align-items: start;
   gap: 0.5rem;
   font-size: 0.875rem;
-  color: var(--color-primary-fixed);
+  color: light-dark(var(--color-primary-fixed), var(--color-on-primary-fixed));
 }
 .listing-publish-card p svg {
   margin-top: 0.15rem;
@@ -451,10 +449,10 @@
   gap: 0.375rem;
 }
 .listing-publish-card .button-primary:hover {
-  background: var(--color-secondary-fixed);
+  background: light-dark(var(--color-secondary-fixed), var(--color-secondary));
 }
 .listing-publish-card .text-link {
-  color: var(--color-primary-fixed);
+  color: light-dark(var(--color-primary-fixed), var(--color-on-primary-fixed));
   text-align: center;
   font-size: 0.875rem;
 }
@@ -462,7 +460,7 @@
   border: 1px solid var(--color-outline-variant);
   border-radius: 1rem;
   padding: 1.5rem;
-  background: white;
+  background: var(--color-surface-container-lowest);
   color: var(--color-on-surface);
   max-width: 440px;
   width: calc(100% - 2rem);

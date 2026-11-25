@@ -89,7 +89,7 @@ button:disabled {
   color: var(--color-primary);
 }
 .auth-card {
-  background: white;
+  background: var(--color-surface-container-lowest);
   border: 1px solid var(--color-outline-variant);
   border-radius: 1.5rem;
   padding: 1.5rem;
@@ -190,7 +190,7 @@ button:disabled {
 .form-field input,
 .form-field textarea,
 .otp-input {
-  background: white;
+  background: var(--color-surface-container-lowest);
   color: var(--color-on-surface);
   width: 100%;
   min-height: 44px;
@@ -477,7 +477,7 @@ button:disabled {
   margin-top: 1.25rem;
 }
 .account-card {
-  background: white;
+  background: var(--color-surface-container-lowest);
   border: 1px solid var(--color-outline-variant);
   padding: 1.5rem;
   border-radius: 1rem;

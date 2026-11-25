@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Menu, X, LogIn, LogOut, UserRound, Bell } from 'lucide-react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import Brand from './Brand.jsx';
+import ThemeSelect from './ThemeSelect.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import ScrollProgressBanner from './ScrollProgressBanner.jsx';
 import { useNotificationCount } from '../lib/notification-count.js';
@@ -122,18 +123,21 @@ export default function Navbar() {
               </NavLink>
             ))}
           </nav>
-          <div className="desktop-actions">{accountLinks}</div>
-          <button
-            ref={toggle}
-            type="button"
-            className="menu-toggle"
-            aria-expanded={open}
-            aria-controls="mobile-navigation"
-            aria-label={open ? 'মেনু বন্ধ করুন' : 'মেনু খুলুন'}
-            onClick={() => setOpen(!open)}
-          >
-            {open ? <X aria-hidden="true" /> : <Menu aria-hidden="true" />}
-          </button>
+          <div className="navbar-controls">
+            <ThemeSelect />
+            <div className="desktop-actions">{accountLinks}</div>
+            <button
+              ref={toggle}
+              type="button"
+              className="menu-toggle"
+              aria-expanded={open}
+              aria-controls="mobile-navigation"
+              aria-label={open ? 'মেনু বন্ধ করুন' : 'মেনু খুলুন'}
+              onClick={() => setOpen(!open)}
+            >
+              {open ? <X aria-hidden="true" /> : <Menu aria-hidden="true" />}
+            </button>
+          </div>
         </div>
         <nav
           id="mobile-navigation"

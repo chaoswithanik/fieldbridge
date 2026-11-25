@@ -19,7 +19,7 @@
 }
 .registration-choices a.active {
   background: var(--color-primary);
-  color: white;
+  color: var(--color-on-primary);
   font-weight: 600;
 }
 .registration-choices a:not(.active):hover {
@@ -64,7 +64,7 @@
   padding: 0.5rem;
   border: 1px solid var(--color-outline-variant);
   border-radius: 0.5rem;
-  background: white;
+  background: var(--color-surface-container-lowest);
   color: var(--color-on-surface-variant);
   font: inherit;
 }
@@ -196,12 +196,12 @@
   border-radius: 0.5rem;
   font-size: 0.875rem;
   color: var(--color-on-surface-variant);
-  background: white;
+  background: var(--color-surface-container-lowest);
 }
 .review-filters button[aria-pressed='true'] {
   background: var(--color-primary);
   border-color: var(--color-primary);
-  color: white;
+  color: var(--color-on-primary);
 }
 .review-filters button span {
   font-variant-numeric: tabular-nums;
@@ -231,7 +231,7 @@
 .application-item {
   text-align: left;
   width: 100%;
-  background: white;
+  background: var(--color-surface-container-lowest);
   border: 1px solid var(--color-outline-variant);
   border-radius: 0.75rem;
   padding: 1rem;
@@ -345,7 +345,7 @@
   margin-top: 1rem;
 }
 .button.button-reject {
-  background: white;
+  background: var(--color-surface-container-lowest);
   color: var(--color-error);
   border-color: var(--color-error);
 }

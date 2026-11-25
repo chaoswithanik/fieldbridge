@@ -3,7 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#032517" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#032517" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#101713" />
+    <script>
+      // Apply a saved preference before the first paint.
+      try {
+        const theme = localStorage.getItem('fieldbridge-theme');
+        if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
+      } catch {}
+    </script>
     <meta name="description" content="ফিল্ডব্রিজ — বাংলাদেশের কৃষক ও ক্রেতার মধ্যে কৃষিপণ্য কেনাবেচা এবং সরবরাহ সমন্বয়ের উদ্যোগ।" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <title>ফিল্ডব্রিজ | আমাদের সম্পর্কে</title>
