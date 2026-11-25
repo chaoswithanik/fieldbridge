@@ -1,16 +1,6 @@
 import { ClipboardList, MapPin } from 'lucide-react';
-import { NavLink } from 'react-router-dom';
 import { formatAmount, unitLabels } from '../lib/listings.js';
 import { requirementLabels } from '../lib/requirements.js';
-
-export function MatchingTabs({ id }) {
-  return (
-    <nav className="matching-tabs" aria-label="সরবরাহের ধরন">
-      <NavLink to={`/requirements/${id}/matches`}>একক কৃষক</NavLink>
-      <NavLink to={`/requirements/${id}/combinations`}>সম্মিলিত সরবরাহ</NavLink>
-    </nav>
-  );
-}
 
 export default function MatchingRequirementSummary({ requirement }) {
   return (

@@ -4,7 +4,7 @@ import { sequelize } from '../config/database.js';
 import { env } from '../config/env.js';
 import { models } from '../models/index.js';
 import { AppError } from '../lib/errors.js';
-import { scaledDecimal, decimalString } from '../lib/collective-matching.js';
+import { scaledDecimal, decimalString, requirementLotQuantities } from '../lib/collective-matching.js';
 import {
   orderSelection,
   orderSubmission,
@@ -102,23 +102,19 @@ async function selectionPreview(buyerId, input, transaction) {
     }
     rows.push(row);
   }
-  const mode = rows.length === 1 ? 'individual' : 'collective',
-    target = quantity(requirement.quantity);
-  const total =
-    mode === 'individual' ? target : rows.reduce((sum, row) => sum + quantity(row.quantity), 0n);
-  if (
-    (mode === 'individual' && quantity(rows[0].quantity) < target) ||
-    (mode === 'collective' && (farmers.size < 2 || total * 5n > target * 6n))
-  )
-    throw stale();
+  const mode = farmers.size === 1 ? 'individual' : 'collective';
+  const target = quantity(requirement.quantity);
+  const amounts = requirementLotQuantities(rows, requirement.quantity);
+  const total = [...amounts.values()].reduce((sum, amount) => sum + amount, 0n);
+  if (total * 5n > target * 6n || [...amounts.values()].includes(0n)) throw stale();
   const items = rows.map((row) => {
-    const farmer = farmers.get(row.farmerId),
-      amount = mode === 'individual' ? requirement.quantity : row.quantity;
+    const farmer = farmers.get(row.farmerId);
+    const amount = decimalString(amounts.get(row.id), 3);
     return {
       listingId: row.id,
       listingVersion: row.version,
       farmerId: row.farmerId,
-      quantity: decimalString(quantity(amount), 3),
+      quantity: amount,
       subtotal: decimalString(cost(amount, row.pricePerUnit), 2),
       snapshot: orderItemSnapshot(row, farmer),
     };

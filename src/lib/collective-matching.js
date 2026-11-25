@@ -73,7 +73,29 @@ export function combinationComparator(sort = 'recommended') {
   };
 }
 
-// Searches whole listing lots from one or more farmers. No farmer/listing cap.
+// Use the larger lots first when drawing a requested amount from one farm.
+// The ID tie-break makes the allocation identical during matching and checkout.
+function orderedLots(listings) {
+  return listings.map((listing) => ({
+    listing,
+    quantity: scaledDecimal(listing.quantity, 3),
+    price: scaledDecimal(listing.pricePerUnit, 2),
+  })).sort((a, b) => compare(b.quantity, a.quantity) || compare(a.listing.id, b.listing.id));
+}
+
+export function requirementLotQuantities(listings, requested) {
+  const singleFarm = listings.every((row) => row.farmerId === listings[0].farmerId);
+  let remaining = scaledDecimal(requested, 3);
+  const amounts = new Map();
+  for (const { listing, quantity } of orderedLots(listings)) {
+    const amount = singleFarm && remaining < quantity ? remaining : quantity;
+    amounts.set(listing.id, amount);
+    remaining -= amount;
+  }
+  return amounts;
+}
+
+// Searches listing lots from one or more farmers. No farmer/listing cap.
 // Bounds discard only branches that cannot improve the proven top five. Work yields to
 // HTTP handling; if exhaustive ranking cannot finish, fail explicitly instead of calling
 // a truncated candidate sample the best results.
@@ -81,36 +103,45 @@ export async function bestCollectiveCombinations(
   listings,
   requested,
   sort = 'recommended',
-  { proximity = administrativeProximity, timeoutMs = 3000 } = {},
+  { proximity = administrativeProximity, timeoutMs = 3000, prioritizeSingleFarm = false } = {},
 ) {
   const target = scaledDecimal(requested, 3),
     maximum = (target * 6n) / 5n;
-  const rows = listings
-    .map((listing) => ({
-      listing,
-      quantity: scaledDecimal(listing.quantity, 3),
-      cost:
-        (scaledDecimal(listing.quantity, 3) * scaledDecimal(listing.pricePerUnit, 2) + 500n) /
-        1000n,
-    }))
-    .filter((row) => row.quantity > 0n && row.quantity <= maximum)
-    .sort((a, b) => compare(b.quantity, a.quantity) || compare(a.listing.id, b.listing.id));
-  const suffix = Array(rows.length + 1).fill(0n);
-  for (let i = rows.length - 1; i >= 0; i--) suffix[i] = suffix[i + 1] + rows[i].quantity;
+  const stock = orderedLots(listings).filter((row) => row.quantity > 0n);
+  const wholeLots = stock.filter((row) => row.quantity <= maximum);
   const comparator = combinationComparator(sort),
     results = [],
     started = performance.now();
   let operations = 0;
-  for (const [category, minimum, upper] of [
+  const phases = [
     [0, target, target],
     [1, target + 1n, maximum],
     [2, 1n, target - 1n],
-  ]) {
+  ];
+  if (prioritizeSingleFarm) phases.unshift([0, target, target, true]);
+  for (const [category, minimum, upper, singleFarmOnly] of phases) {
+    const rows = singleFarmOnly
+      ? [...stock].sort((a, b) => compare(a.listing.farmerId, b.listing.farmerId))
+      : wholeLots;
+    const suffix = Array(rows.length + 1).fill(0n);
+    for (let i = rows.length - 1; i >= 0; i--) suffix[i] = suffix[i + 1] + rows[i].quantity;
     if (results.length === 5 || upper < minimum || suffix[0] < minimum) continue;
     const phase = [],
       selected = [],
       farmers = new Map();
-    const stack = [{ next: 0, quantity: 0n, cost: 0n, availableDate: '', harvestDate: '' }];
+    const stack = [];
+    // Each priority branch searches one farmer's lots and can stop immediately
+    // when that farmer has insufficient stock across all their listings.
+    for (let start = 0; start < rows.length;) {
+      let end = rows.length;
+      if (singleFarmOnly) {
+        end = start + 1;
+        while (end < rows.length && rows[end].listing.farmerId === rows[start].listing.farmerId) end++;
+      }
+      if (suffix[start] - suffix[end] >= minimum)
+        stack.push({ next: start, end, quantity: 0n, cost: 0n, availableDate: '', harvestDate: '' });
+      start = end;
+    }
     while (stack.length) {
       if (++operations % 1024 === 0) {
         await setImmediate();
@@ -121,7 +152,7 @@ export async function bestCollectiveCombinations(
           );
       }
       const parent = stack.at(-1);
-      if (parent.next === rows.length) {
+      if (parent.next === parent.end) {
         stack.pop();
         if (selected.length) {
           const id = rows[selected.pop()].listing.farmerId,
@@ -131,11 +162,13 @@ export async function bestCollectiveCombinations(
         }
         continue;
       }
-      const index = parent.next++,
-        row = rows[index],
-        quantity = parent.quantity + row.quantity;
-      if (quantity > upper || quantity + suffix[index + 1] < minimum) continue;
-      const cost = parent.cost + row.cost;
+      const index = parent.next++;
+      const row = rows[index];
+      const remaining = target - parent.quantity;
+      const take = singleFarmOnly && remaining < row.quantity ? remaining : row.quantity;
+      const quantity = parent.quantity + take;
+      if (quantity > upper || quantity + suffix[index + 1] - suffix[parent.end] < minimum) continue;
+      const cost = parent.cost + (take * row.price + 500n) / 1000n;
       const availableDate =
         parent.availableDate > row.listing.availableDate
           ? parent.availableDate
@@ -155,7 +188,9 @@ export async function bestCollectiveCombinations(
       if (phase.length === 5 - results.length && comparator(bound, phase.at(-1)) > 0) continue;
       selected.push(index);
       farmers.set(row.listing.farmerId, (farmers.get(row.listing.farmerId) || 0) + 1);
-      if (quantity >= minimum) {
+      // A complete one-farm selection has already competed in the priority phase.
+      const alreadyRanked = prioritizeSingleFarm && !singleFarmOnly && category !== 2 && farmerCount === 1;
+      if (quantity >= minimum && !alreadyRanked) {
         const members = selected.map((i) => rows[i].listing).sort((a, b) => compare(a.id, b.id));
         phase.push({
           category,
@@ -172,7 +207,8 @@ export async function bestCollectiveCombinations(
         if (phase.length > 5 - results.length) phase.pop();
       }
       stack.push({
-        next: quantity === upper ? rows.length : index + 1,
+        end: parent.end,
+        next: quantity === upper ? parent.end : index + 1,
         quantity,
         cost,
         availableDate,

@@ -561,6 +561,31 @@ if (process.env.AUTH_INTEGRATION !== '1') {
       403,
     );
   });
+  test('one farm can fill a demand across lots ahead of cheaper multi-farm matches, at the advertised cost', async () => {
+    const set = await setup(['65', '60', '35', '35'], '100', 'buyer', [
+      'farmer1', 'farmer1', 'farmer2', 'farmer3',
+    ]);
+    await set.listings[1].update({ pricePerUnit: '500.00', availableDate: '2027-01-01' });
+    const path = `buyer/requirements/${set.requirement.id}/combinations`;
+    for (const sort of ['recommended', 'price_asc', 'available_asc']) {
+      const { data } = await request(`${path}?sort=${sort}`);
+      const [first] = data.combinations;
+      assert.equal(first.farmerCount, 1);
+      assert.equal(first.fulfilment, 'exact');
+      assert.equal(first.quantity, '100.000');
+    }
+    const { data } = await request(path);
+    const [match] = data.combinations;
+    assert.ok(data.combinations.some((c) => c.farmerCount === 2 && c.fulfilment === 'exact'));
+    assert.equal(match.farmerCount, 1);
+    assert.equal(match.listings.find((row) => row.id === set.listings[1].id).proposedQuantity, '35.000');
+    const order = await place({ ...set, listings: set.listings.slice(0, 2) });
+    assert.equal(order.totalQuantity, match.quantity);
+    assert.equal(order.totalCost, match.totalCost);
+    assert.equal(order.portions.length, 1);
+    assert.equal((await set.listings[1].reload()).quantity, '25.000');
+  });
+
   test('partial and exactly 20% excess orders reserve complete collective lots while excessive and inactive selections fail', async () => {
     for (const [quantities, total] of [
       [['600.000', '300.000'], '900.000'],

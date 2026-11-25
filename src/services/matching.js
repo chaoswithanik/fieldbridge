@@ -9,6 +9,7 @@ import {
 } from '../lib/matching-validation.js';
 import {
   bestCollectiveCombinations,
+  requirementLotQuantities,
   scaledDecimal,
   decimalString,
 } from '../lib/collective-matching.js';
@@ -86,7 +87,7 @@ export async function collectiveRequirementMatches(buyerId, id, query = {}) {
           cropName: requirement.cropName,
           unit: requirement.unit,
           status: 'active',
-          quantity: { [Op.gt]: 0, [Op.lte]: decimalString((target * 6n) / 5n, 3) },
+          quantity: { [Op.gt]: 0 },
         },
         attributes: [
           'id',
@@ -107,37 +108,43 @@ export async function collectiveRequirementMatches(buyerId, id, query = {}) {
         include: [marketFarmerJoin(true)],
         transaction,
       });
-      const matches = await bestCollectiveCombinations(listings, requirement.quantity, sort);
+      const matches = await bestCollectiveCombinations(listings, requirement.quantity, sort, {
+        prioritizeSingleFarm: true,
+      });
       return {
         requirement: ownRequirement(requirement),
         sort,
-        combinations: matches.map((match) => ({
-          id: match.key,
-          fulfilment: ['exact', 'excess', 'partial'][match.category],
-          quantity: decimalString(match.quantity, 3),
-          excessQuantity: decimalString(match.quantity > target ? match.quantity - target : 0n, 3),
-          shortageQuantity: decimalString(
-            match.quantity < target ? target - match.quantity : 0n,
-            3,
-          ),
-          totalCost: decimalString(match.cost, 2),
-          availableDate: match.availableDate,
-          harvestDate: match.harvestDate,
-          farmerCount: match.farmerCount,
-          proximity: {
-            sameUpazilaPairs: match.proximity.sameUpazilaPairs,
-            sameDistrictPairs: match.proximity.sameDistrictPairs,
-            differentDistrictPairs: match.proximity.differentDistrictPairs,
-          },
-          listings: match.members.map((listing) => ({
-            ...marketListing(listing, true, true),
-            subtotal: decimalString(
-              (scaledDecimal(listing.quantity, 3) * scaledDecimal(listing.pricePerUnit, 2) + 500n) /
-                1000n,
-              2,
+        combinations: matches.map((match) => {
+          const amounts = requirementLotQuantities(match.members, requirement.quantity);
+          return {
+            id: match.key,
+            fulfilment: ['exact', 'excess', 'partial'][match.category],
+            quantity: decimalString(match.quantity, 3),
+            excessQuantity: decimalString(match.quantity > target ? match.quantity - target : 0n, 3),
+            shortageQuantity: decimalString(
+              match.quantity < target ? target - match.quantity : 0n,
+              3,
             ),
-          })),
-        })),
+            totalCost: decimalString(match.cost, 2),
+            availableDate: match.availableDate,
+            harvestDate: match.harvestDate,
+            farmerCount: match.farmerCount,
+            proximity: {
+              sameUpazilaPairs: match.proximity.sameUpazilaPairs,
+              sameDistrictPairs: match.proximity.sameDistrictPairs,
+              differentDistrictPairs: match.proximity.differentDistrictPairs,
+            },
+            listings: match.members.map((listing) => ({
+              ...marketListing(listing, true, true),
+              proposedQuantity: decimalString(amounts.get(listing.id), 3),
+              subtotal: decimalString(
+                (amounts.get(listing.id) * scaledDecimal(listing.pricePerUnit, 2) + 500n) /
+                  1000n,
+                2,
+              ),
+            })),
+          };
+        }),
       };
     },
   );

@@ -3,35 +3,6 @@
   width: 100%;
   gap: 0.375rem;
 }
-.requirement-match-actions {
-  display: grid;
-  gap: 0.5rem;
-  margin-top: 0.875rem;
-}
-.requirement-match-actions .requirement-match-link {
-  margin-top: 0;
-}
-.matching-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-}
-.matching-tabs a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  padding: 0.5rem 0.875rem;
-  border: 1px solid var(--color-outline-variant);
-  border-radius: 0.5rem;
-  color: var(--color-primary);
-  font-size: 0.9375rem;
-}
-.matching-tabs a.active {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
-  color: white;
-}
 .combination-rules {
   margin-top: 0.875rem;
   font-size: 0.875rem;
@@ -265,51 +236,6 @@
   margin-block: 0.75rem;
   color: var(--color-on-surface-variant);
   font-size: 0.875rem;
-}
-.matching-farmer {
-  padding-top: 0.875rem;
-}
-.matching-farmer h3 {
-  display: flex;
-  align-items: start;
-  gap: 0.375rem;
-  font-size: 0.9375rem;
-  font-weight: 600;
-  color: var(--color-primary);
-  overflow-wrap: anywhere;
-}
-.matching-farmer h3 svg {
-  margin-top: 0.15rem;
-}
-.matching-farm-name {
-  color: var(--color-on-surface-variant);
-  font-size: 0.8125rem;
-  margin-top: 0.125rem;
-}
-.matching-farmer > a {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  color: var(--color-primary);
-  font-variant-numeric: tabular-nums;
-  font-size: 0.875rem;
-  min-height: 44px;
-  text-decoration: underline;
-  text-underline-offset: 0.25rem;
-}
-.matching-farm-address {
-  display: flex;
-  align-items: start;
-  gap: 0.375rem;
-  color: var(--color-on-surface-variant);
-  font-size: 0.8125rem;
-}
-.matching-farm-address svg {
-  margin-top: 0.15rem;
-}
-.matching-farm-address span {
-  overflow-wrap: anywhere;
-  white-space: pre-wrap;
 }
 @media (max-width: 767px) {
   .matching-requirement {

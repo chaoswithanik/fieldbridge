@@ -3,9 +3,7 @@ import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import { UsersRound, RefreshCw, LoaderCircle, Search, MapPin, Phone } from 'lucide-react';
 import AuthGate from '../components/AuthGate.jsx';
 import OrderButton from '../components/OrderButton.jsx';
-import MatchingRequirementSummary, {
-  MatchingTabs,
-} from '../components/MatchingRequirementSummary.jsx';
+import MatchingRequirementSummary from '../components/MatchingRequirementSummary.jsx';
 import { useApiResource } from '../lib/resource.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { bangla } from '../lib/registration.js';
@@ -74,13 +72,12 @@ function CollectiveContent() {
       <div className="market-heading">
         <div>
           <span className="eyebrow">
-            <UsersRound size={17} aria-hidden="true" /> একসঙ্গে চাহিদা পূরণ
+            <UsersRound size={17} aria-hidden="true" /> সরবরাহের মিল
           </span>
-          <h1>কৃষকদের সম্মিলিত সরবরাহ</h1>
-          <p>একজন বা একাধিক কৃষকের ফসল মিলিয়ে আপনার প্রয়োজন মেটানোর সর্বোচ্চ পাঁচটি সমন্বয়।</p>
+          <h1>চাহিদার সঙ্গে মিলে যাওয়া ফসল</h1>
+          <p>একজন কৃষক পুরো চাহিদা মেটাতে পারলে তাঁর সরবরাহ আগে দেখানো হয়।</p>
         </div>
       </div>
-      <MatchingTabs id={id} />
       <MatchingRequirementSummary requirement={requirement} />
       <div className="market-results-toolbar">
         <p role="status">{bangla(combinations.length)}টি সমন্বয় পাওয়া গেছে</p>
@@ -184,7 +181,7 @@ function CollectiveContent() {
                       </div>
                       <p>
                         <strong>
-                          {formatAmount(listing.quantity)} {unit}
+                          {formatAmount(listing.proposedQuantity)} {unit}
                         </strong>{' '}
                         · প্রতি {unit} {money(listing.pricePerUnit)} · উপমোট{' '}
                         {money(listing.subtotal)}
@@ -224,10 +221,10 @@ function CollectiveContent() {
             <Search size={30} aria-hidden="true" />
           </span>
           <h2>উপযুক্ত সরবরাহের সমন্বয় পাওয়া যায়নি</h2>
-          <p>একই ফসল ও এককের উপযুক্ত চালু মজুত পাওয়া যায়নি। একক কৃষকের সরবরাহও দেখে নিতে পারেন।</p>
-          <Link className="button button-primary" to={`/requirements/${id}/matches`}>
-            একক কৃষকের ফসল দেখুন
-          </Link>
+          <p>এই চাহিদার ফসল ও এককের জন্য উপযুক্ত মজুত পাওয়া যায়নি।</p>
+          <button type="button" className="button button-primary" onClick={reload}>
+            <RefreshCw size={16} aria-hidden="true" /> আবার খুঁজুন
+          </button>
         </div>
       )}
       <p className="matching-rules">
