@@ -250,9 +250,9 @@ export async function reserveOrderItems(rows, items, transaction) {
     );
   }
 }
-export async function previewOrder(buyerId, input) {
+export async function previewOrder(buyerId, input, parentTransaction) {
   return sequelize.transaction(
-    { isolationLevel: Transaction.ISOLATION_LEVELS.READ_COMMITTED },
+    { isolationLevel: Transaction.ISOLATION_LEVELS.READ_COMMITTED, transaction: parentTransaction },
     async (transaction) => {
       await assertApprovedOrderBuyer(buyerId, transaction);
       const preview = await selectionPreview(buyerId, input, transaction);
@@ -390,11 +390,11 @@ export async function listOrders(user, query) {
     pages: Math.max(1, Math.ceil(count / 12)),
   };
 }
-export async function placeOrder(buyerId, input) {
+export async function placeOrder(buyerId, input, parentTransaction) {
   const { quoteToken, requestId } = orderSubmission(input),
     requestHash = createHash('sha256').update(quoteToken).digest('hex');
   return sequelize.transaction(
-    { isolationLevel: Transaction.ISOLATION_LEVELS.READ_COMMITTED },
+    { isolationLevel: Transaction.ISOLATION_LEVELS.READ_COMMITTED, transaction: parentTransaction },
     async (transaction) => {
       await assertApprovedOrderBuyer(buyerId, transaction);
       const existing = await models.Order.findOne({ where: { buyerId, requestId }, transaction });
@@ -448,12 +448,12 @@ export async function placeOrder(buyerId, input) {
     },
   );
 }
-export async function respondToOrder(farmerId, portionId, input) {
+export async function respondToOrder(farmerId, portionId, input, parentTransaction) {
   const { decision, version } = orderDecision(input);
   if (!uuidPattern.test(portionId || ''))
     throw new AppError(404, 'অর্ডারের অংশটি খুঁজে পাওয়া যায়নি।');
   return sequelize.transaction(
-    { isolationLevel: Transaction.ISOLATION_LEVELS.READ_COMMITTED },
+    { isolationLevel: Transaction.ISOLATION_LEVELS.READ_COMMITTED, transaction: parentTransaction },
     async (transaction) => {
       const owned = await models.OrderPortion.findOne({
         where: { id: portionId, farmerId },

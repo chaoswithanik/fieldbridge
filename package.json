@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
+    "demo": "node scripts/demo/seed.js",
     "db:check": "node scripts/check-database.js",
     "db:migrate": "node scripts/migrate.js",
     "admin": "node scripts/create-admin.js",

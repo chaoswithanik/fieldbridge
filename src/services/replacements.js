@@ -252,8 +252,8 @@ async function preview(ctx, input, transaction) {
     token: signQuote(payload),
   };
 }
-export async function previewReplacement(buyerId, orderId, input) {
-  return sequelize.transaction(transactionWrite, async (transaction) => {
+export async function previewReplacement(buyerId, orderId, input, parentTransaction) {
+  return sequelize.transaction({ ...transactionWrite, transaction: parentTransaction }, async (transaction) => {
     const ctx = await context(buyerId, orderId, transaction, true),
       result = await preview(ctx, input, transaction);
     return {
@@ -272,10 +272,10 @@ export async function previewReplacement(buyerId, orderId, input) {
     };
   });
 }
-export async function confirmReplacement(buyerId, orderId, input) {
+export async function confirmReplacement(buyerId, orderId, input, parentTransaction) {
   const { quoteToken, requestId } = orderSubmission(input),
     requestHash = createHash('sha256').update(quoteToken).digest('hex');
-  return sequelize.transaction(transactionWrite, async (transaction) => {
+  return sequelize.transaction({ ...transactionWrite, transaction: parentTransaction }, async (transaction) => {
     const ctx = await context(buyerId, orderId, transaction, true);
     const existing = await models.OrderReplacement.findOne({
       where: { buyerId, requestId },
