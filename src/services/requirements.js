@@ -33,7 +33,7 @@ async function approvedBuyer(buyerId, transaction) {
     lock: transaction.LOCK.UPDATE,
   });
   if (!profile || profile.status !== 'approved')
-    throw new AppError(403, 'চাহিদা পরিচালনার জন্য ক্রেতার অনুমোদন প্রয়োজন।');
+    throw new AppError(403, 'চাহিদা পরিচালনার জন্য ক্রেতার অনুমোদন নেই।');
 }
 
 export async function findOwnRequirement(buyerId, id, transaction) {

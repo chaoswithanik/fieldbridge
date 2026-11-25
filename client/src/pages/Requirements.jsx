@@ -96,9 +96,6 @@ function RequirementsContent() {
   }
   return (
     <section className="page-container listings-page">
-      <Link className="text-link listing-back" to="/account">
-        আমার অ্যাকাউন্ট
-      </Link>
       <div className="listing-page-heading">
         <div>
           <span className="eyebrow">

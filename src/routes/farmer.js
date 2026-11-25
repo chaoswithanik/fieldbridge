@@ -5,6 +5,7 @@ import { requireRole } from '../middleware/auth.js';
 import { AppError } from '../lib/errors.js';
 import { photoFilenamePattern } from '../lib/listing-validation.js';
 import { listingPhotoDirectory } from '../services/listing-photos.js';
+import { editFarmerProfile } from '../services/farmers.js';
 import {
   listOwnListings,
   findOwnListing,
@@ -53,6 +54,24 @@ const writeLimit = rateLimit({
     res
       .status(429)
       .json({ success: false, message: 'অল্প সময়ে অনেকবার পরিবর্তন করেছেন। কিছুক্ষণ পরে চেষ্টা করুন।' }),
+});
+
+const profilePhoto = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 2 * 1024 * 1024, files: 1, fields: 8, fieldSize: 4096 },
+  fileFilter(_req, file, callback) {
+    callback(
+      ['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype)
+        ? null
+        : new AppError(422, 'ছবির ফরম্যাট সঠিক নয়।', { photo: 'JPG, PNG অথবা WebP ছবি দিন।' }),
+      true,
+    );
+  },
+}).single('photo');
+
+farmerRouter.patch('/profile', writeLimit, profilePhoto, async (req, res) => {
+  const user = await editFarmerProfile(req.user.id, req.body, req.file);
+  res.json({ success: true, user, message: 'আপনার প্রোফাইলের তথ্য সংরক্ষণ হয়েছে।' });
 });
 
 farmerRouter.get('/listings', async (req, res) => {

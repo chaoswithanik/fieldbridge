@@ -147,9 +147,6 @@ function OrderContent() {
     farmer = user.role === 'farmer';
   return (
     <section className="page-container market-page">
-      <Link className="text-link listing-back" to="/orders">
-        আমার অর্ডার
-      </Link>
       <div className="market-heading">
         <div>
           <span className="eyebrow">
@@ -194,21 +191,6 @@ function OrderContent() {
             </dd>
           </div>
         </dl>
-        <p className="field-hint">
-          প্রত্যাখ্যানের ইতিহাসে {formatAmount(order.rejectedQuantity)} {unit}
-          {!farmer && (
-            <>
-              {' '}
-              · চাহিদার মধ্যে এখনো গৃহীত হওয়া বাকি {formatAmount(order.unfulfilledQuantity)} {unit}
-            </>
-          )}
-        </p>
-        {!farmer && (
-          <p className="field-hint order-original-total">
-            অর্ডার শুরুর পরিমাণ {formatAmount(order.totalQuantity)} {unit} · শুরুর পণ্যমূল্য{' '}
-            {formatMoney(order.totalCost)}। বর্তমান সরবরাহ ও মূল্যে পুরোনো প্রত্যাখ্যাত অংশ নেই।
-          </p>
-        )}
         {!farmer && Number(order.totalQuantity) !== Number(order.requestedQuantity) && (
           <p className="listing-info">
             মূল চাহিদা {formatAmount(order.requestedQuantity)} {unit}; অর্ডারটি{' '}
@@ -314,11 +296,6 @@ function OrderContent() {
           </article>
         ))}
       </div>
-      <p className="matching-rules">
-        কৃষকের উত্তর দেওয়ার সময়সীমা নেই। অপেক্ষমাণ ও গৃহীত অংশের মজুত এই অর্ডারের জন্য সংরক্ষিত
-        থাকে। প্রত্যাখ্যান করলে সংশ্লিষ্ট মজুতের সংরক্ষণ ছেড়ে দেওয়া হয়। পণ্যমূল্যে পরিবহন খরচ
-        অন্তর্ভুক্ত নয়।
-      </p>
       {action && (
         <ResponseDialog
           action={action}

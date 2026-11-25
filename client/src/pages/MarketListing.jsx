@@ -56,11 +56,11 @@ export default function MarketListing() {
   const replacementFrom =
     typeof location.state?.from === 'string' &&
     /^\/orders\/[a-f0-9-]{36}\/replacements(?:\?|$)/.test(location.state.from);
-  const backLabel = replacementFrom
-    ? 'বিকল্প সরবরাহে ফিরুন'
+  const destinationLabel = replacementFrom
+    ? 'বিকল্প সরবরাহ দেখুন'
     : matchingFrom
-      ? 'মিলে যাওয়া ফসলে ফিরুন'
-      : 'ফসলের বাজারে ফিরুন';
+      ? 'মিলে যাওয়া ফসল দেখুন'
+      : 'বাজারে ফসল দেখুন';
   const from =
     typeof location.state?.from === 'string' &&
     (replacementFrom || matchingFrom || /^\/marketplace(?:\?|$)/.test(location.state.from))
@@ -81,7 +81,7 @@ export default function MarketListing() {
         <h1>এই ফসলের বিজ্ঞাপনটি বাজারে নেই।</h1>
         <p>বিক্রি শেষ হয়ে যেতে পারে, অথবা কৃষক বিজ্ঞাপনটি বন্ধ বা মুছে ফেলেছেন।</p>
         <Link className="button button-primary" to={from}>
-          {backLabel}
+          {destinationLabel}
         </Link>
       </section>
     );
@@ -95,17 +95,14 @@ export default function MarketListing() {
           আবার চেষ্টা করুন
         </button>
         <Link className="text-link" to={from}>
-          {backLabel}
+          {destinationLabel}
         </Link>
       </section>
     );
   const { listing, access } = data;
   return (
     <section className="page-container market-page">
-      <Link className="text-link listing-back" to={from}>
-        {backLabel}
-      </Link>
-      <div className="market-heading">
+      <div className="market-heading market-detail-heading">
         <div>
           <span className="eyebrow">
             <Sprout size={17} aria-hidden="true" /> কৃষকের ফসল
@@ -115,8 +112,8 @@ export default function MarketListing() {
             <MapPin size={16} aria-hidden="true" /> {listing.upazila}, {listing.district}
           </p>
         </div>
+        <MarketAccessNotice access={access} />
       </div>
-      <MarketAccessNotice access={access} />
       <div className="market-detail-grid">
         <div>
           <PhotoGallery key={listing.id} listing={listing} />
@@ -144,7 +141,7 @@ export default function MarketListing() {
                     `৳${formatAmount(listing.pricePerUnit)}`
                   ) : (
                     <span className="market-price-locked">
-                      <LockKeyhole size={17} aria-hidden="true" /> অনুমোদনের পর দেখা যাবে
+                      <LockKeyhole size={17} aria-hidden="true" />
                     </span>
                   )}
                 </dd>
@@ -188,8 +185,7 @@ export default function MarketListing() {
               </>
             ) : (
               <p className="market-contact-locked">
-                <LockKeyhole size={18} aria-hidden="true" /> কৃষকের নাম, ফোন ও খামারের পূর্ণ ঠিকানা
-                দেখতে অনুমোদিত ক্রেতা হিসেবে প্রবেশ করুন।
+                <LockKeyhole size={18} aria-hidden="true" />
               </p>
             )}
           </article>

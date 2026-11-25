@@ -188,9 +188,6 @@ function ListingFormContent({ id }) {
     );
   return (
     <section className="page-container listings-page listing-form-page">
-      <Link className="text-link listing-back" to="/account/listings">
-        আমার ফসলের বিজ্ঞাপন
-      </Link>
       <div className="listing-page-heading">
         <div>
           <span className="eyebrow">

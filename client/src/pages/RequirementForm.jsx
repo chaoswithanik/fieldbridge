@@ -120,9 +120,6 @@ function RequirementFormContent({ id }) {
   const remaining = requirement?.editsRemaining ?? 2;
   return (
     <section className="page-container listings-page">
-      <Link className="text-link listing-back" to="/requirements">
-        আমার ক্রয় চাহিদা
-      </Link>
       <div className="listing-page-heading">
         <div>
           <span className="eyebrow">

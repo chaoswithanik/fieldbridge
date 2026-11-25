@@ -66,9 +66,6 @@ function CollectiveContent() {
   const from = location.pathname + location.search;
   return (
     <section className="page-container market-page">
-      <Link className="text-link listing-back" to="/requirements">
-        আমার ক্রয় চাহিদা
-      </Link>
       <div className="market-heading">
         <div>
           <span className="eyebrow">

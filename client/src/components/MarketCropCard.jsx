@@ -53,7 +53,7 @@ export default function MarketCropCard({ listing, from, children }) {
                 `৳${formatAmount(listing.pricePerUnit)}`
               ) : (
                 <span className="market-price-locked">
-                  <LockKeyhole size={14} aria-hidden="true" /> অনুমোদন প্রয়োজন
+                  <LockKeyhole size={14} aria-hidden="true" /> অনুমোদন নেই
                 </span>
               )}
             </dd>

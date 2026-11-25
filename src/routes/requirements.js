@@ -19,7 +19,7 @@ import {
 export const requirementsRouter = Router();
 requirementsRouter.use((req, _res, next) => {
   if (req.user.buyerProfile?.status !== 'approved')
-    throw new AppError(403, 'চাহিদা পরিচালনার জন্য ক্রেতার অনুমোদন প্রয়োজন।');
+    throw new AppError(403, 'চাহিদা পরিচালনার জন্য ক্রেতার অনুমোদন নেই।');
   next();
 });
 const writeLimit = rateLimit({

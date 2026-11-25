@@ -125,7 +125,7 @@ export default function BuyerRegister() {
       <RegistrationChoices />
       <h2 className="auth-card-title">ক্রেতা হিসেবে নিবন্ধন করুন</h2>
       <p className="auth-card-description">
-        ইমেইল ছাড়া সব তথ্য আবশ্যক। আবেদন জমা দেওয়ার পর অ্যাডমিনের অনুমোদন প্রয়োজন হবে।
+        ইমেইল ছাড়া সব তথ্য আবশ্যক। আবেদন জমা দেওয়ার পর অ্যাডমিনের অনুমোদন নেই হবে।
       </p>
       {error && (
         <div className="form-alert" role="alert" tabIndex={-1} ref={alert}>

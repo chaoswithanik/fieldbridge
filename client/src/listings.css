@@ -7,11 +7,6 @@
 .listings-page {
   padding-block: 1.25rem 2.5rem;
 }
-.listing-back {
-  display: inline-block;
-  font-size: 0.875rem;
-  margin-bottom: 1rem;
-}
 .listing-page-heading {
   display: flex;
   align-items: center;

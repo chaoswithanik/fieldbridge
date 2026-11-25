@@ -1201,6 +1201,61 @@ if (process.env.AUTH_INTEGRATION !== '1') {
     assert.equal((await request(`${path}/${marketRows[1].id}`)).status, 404);
   });
 
+  test('farmers edit their own profile and photo atomically, with identity, role and stale-edit protection', async () => {
+    const original = await models.User.unscoped().findByPk(primaryUser.id);
+    const farmer = await models.User.create({
+      fullName: 'প্রোফাইলের কৃষক', phone: '01900000991', role: 'farmer',
+      passwordHash: original.passwordHash, phoneVerifiedAt: new Date(),
+    });
+    const farm = await models.FarmerProfile.create({
+      userId: farmer.id, nid: '1234500991', district: profile.district,
+      upazila: profile.upazila, village: profile.village, farmAddress: profile.farmAddress,
+    });
+    const session = await sequelize.transaction((transaction) => newSession(farmer.id, transaction));
+    const cookie = `fieldbridge_session=${session.token}`;
+    const current = (await request('/me', { cookie })).data.user;
+    const input = {
+      fullName: 'সংশোধিত কৃষক', email: ' Profile@Example.test ', farmName: 'নতুন সবুজ খামার',
+      district: 'রংপুর', upazila: 'গঙ্গাচড়া', village: 'লক্ষ্মীটারী',
+      farmAddress: 'নতুন সবুজ খামার, লক্ষ্মীটারী, গঙ্গাচড়া, রংপুর',
+      version: current.farmerProfile.version,
+    };
+    const path = '/api/farmer/profile';
+    const patch = (body, options = {}) => request(path, { method: 'PATCH', cookie, body, ...options });
+    assert.equal((await patch(input, { cookie: undefined })).status, 401);
+    assert.equal((await patch(input, { cookie: buyerCookie })).status, 403);
+    assert.equal((await patch(input, { origin: 'https://other.example' })).status, 403);
+    for (const key of ['phone', 'nid', 'role', 'userId'])
+      assert.equal((await patch({ ...input, [key]: farmer.id })).status, 422);
+    assert.equal((await patch({ ...input, district: '' })).status, 422);
+    const body = new FormData();
+    for (const [key, value] of Object.entries(input)) body.set(key, value);
+    const photo = await sharp({ create: { width: 16, height: 16, channels: 3, background: '#567834' } }).png().toBuffer();
+    body.set('photo', new Blob([photo], { type: 'image/png' }), 'profile.png');
+    const saved = await patch(body);
+    assert.equal(saved.status, 200, JSON.stringify(saved.data));
+    assert.equal(saved.data.user.email, 'profile@example.test');
+    assert.equal(saved.data.user.farmerProfile.farmName, input.farmName);
+    assert.notEqual(saved.data.user.farmerProfile.version, input.version);
+    assert.match(saved.data.user.farmerProfile.photoUrl, /\.webp$/);
+    assert.equal(saved.data.user.phone, farmer.phone);
+    assert.equal((await farm.reload()).nid, '1234500991');
+    assert.equal((await request('/me', { cookie })).data.user.fullName, input.fullName);
+    assert.equal((await patch(input)).status, 409);
+    const version = saved.data.user.farmerProfile.version;
+    const duplicate = await patch({ ...input, email: original.email, farmName: 'অসংরক্ষিত খামার', version });
+    assert.equal(duplicate.status, 409);
+    assert.equal((await farm.reload()).farmName, input.farmName);
+    const invalidPhoto = new FormData();
+    for (const [key, value] of Object.entries({ ...input, version })) invalidPhoto.set(key, value);
+    invalidPhoto.set('photo', new Blob(['invalid image'], { type: 'image/png' }), 'bad.png');
+    assert.equal((await patch(invalidPhoto)).status, 422);
+    const second = await patch({ ...input, email: '', version });
+    assert.equal(second.status, 200);
+    assert.equal(second.data.user.email, null);
+    assert.equal(second.data.user.farmerProfile.photoUrl, saved.data.user.farmerProfile.photoUrl);
+  });
+
   test('login requests are rate-limited', async () => {
     let last;
     for (let i = 0; i < 21; i++) last = await request('/login', { method: 'POST', body: {} });

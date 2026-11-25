@@ -45,6 +45,10 @@ export function publicUser(user) {
           village: profile.village,
           farmAddress: profile.farmAddress,
           farmName: profile.farmName,
+          version: tokenDigest(JSON.stringify([
+            user.fullName, user.email, profile.district, profile.upazila, profile.village,
+            profile.farmAddress, profile.farmName, profile.avatarFilename,
+          ])),
           nidLast4: profile.nid.slice(-4),
           photoUrl: profile.avatarFilename ? `/api/media/avatars/${profile.avatarFilename}` : null,
         }

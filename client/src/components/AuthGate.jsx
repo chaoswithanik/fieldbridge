@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 export default function AuthGate({
   role,
   approvedBuyer = false,
-  approvalTitle = 'ক্রয় চাহিদা পরিচালনার জন্য অনুমোদন প্রয়োজন।',
+  approvalTitle = 'ক্রয় চাহিদা পরিচালনার জন্য অনুমোদন নেই।',
   children,
 }) {
   const { user, loading, loadError, refresh } = useAuth();

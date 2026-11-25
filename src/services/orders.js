@@ -50,7 +50,7 @@ export async function assertApprovedOrderBuyer(buyerId, transaction, lock = 'UPD
     ...(transaction ? { transaction, lock: transaction.LOCK[lock] } : {}),
   });
   if (!profile || profile.status !== 'approved')
-    throw new AppError(403, 'অর্ডার পরিচালনার জন্য ক্রেতার অনুমোদন প্রয়োজন।');
+    throw new AppError(403, 'অর্ডার পরিচালনার জন্য ক্রেতার অনুমোদন নেই।');
   return profile;
 }
 async function selectionPreview(buyerId, input, transaction) {

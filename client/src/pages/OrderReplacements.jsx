@@ -119,9 +119,6 @@ function ReplacementContent() {
   );
   return (
     <section className="page-container market-page">
-      <Link className="text-link listing-back" to={`/orders/${id}`}>
-        অর্ডারে ফিরুন
-      </Link>
       <div className="market-heading">
         <div>
           <span className="eyebrow">
@@ -478,7 +475,7 @@ export default function OrderReplacements() {
     <AuthGate
       role="buyer"
       approvedBuyer
-      approvalTitle="বিকল্প সরবরাহ বাছাইয়ের জন্য অনুমোদন প্রয়োজন।"
+      approvalTitle="বিকল্প সরবরাহ বাছাইয়ের জন্য অনুমোদন নেই।"
     >
       <ReplacementContent />
     </AuthGate>

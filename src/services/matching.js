@@ -27,7 +27,7 @@ export async function individualRequirementMatches(buyerId, id, query = {}) {
         lock: transaction.LOCK.SHARE,
       });
       if (!profile || profile.status !== 'approved')
-        throw new AppError(403, 'মিলে যাওয়া ফসল দেখতে ক্রেতার অনুমোদন প্রয়োজন।');
+        throw new AppError(403, 'মিলে যাওয়া ফসল দেখতে ক্রেতার অনুমোদন নেই।');
       const requirement = await findOwnRequirement(buyerId, id, transaction);
       const { rows, count } = await models.CropListing.findAndCountAll({
         where: {
@@ -79,7 +79,7 @@ export async function collectiveRequirementMatches(buyerId, id, query = {}) {
         lock: transaction.LOCK.SHARE,
       });
       if (!profile || profile.status !== 'approved')
-        throw new AppError(403, 'সম্মিলিত সরবরাহ দেখতে ক্রেতার অনুমোদন প্রয়োজন।');
+        throw new AppError(403, 'সম্মিলিত সরবরাহ দেখতে ক্রেতার অনুমোদন নেই।');
       const requirement = await findOwnRequirement(buyerId, id, transaction);
       const target = scaledDecimal(requirement.quantity, 3);
       const listings = await models.CropListing.findAll({

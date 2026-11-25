@@ -1,14 +1,8 @@
-import { Link } from 'react-router-dom';
-import { Sprout, ShieldCheck, Wheat, ChevronRight } from 'lucide-react';
+import { Sprout, ShieldCheck, Wheat } from 'lucide-react';
 
 export default function AuthLayout({ children, login = false, buyer = false }) {
   return (
     <div className={`page-container auth-page ${login ? 'auth-page-login' : ''}`}>
-      <nav className="breadcrumb" aria-label="অবস্থান">
-        <Link to="/about">ফিল্ডব্রিজ</Link>
-        <ChevronRight size={14} aria-hidden="true" />
-        <span aria-current="page">{login ? 'প্রবেশ' : buyer ? 'ক্রেতা নিবন্ধন' : 'কৃষক নিবন্ধন'}</span>
-      </nav>
       <div className="auth-grid">
         <aside className="auth-story">
           <span className="eyebrow">

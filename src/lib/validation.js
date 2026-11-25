@@ -20,8 +20,7 @@ export function validPhone(value) {
   return phone;
 }
 
-export function validateFarmer(input = {}) {
-  const fields = {};
+function farmerDetails(input, fields) {
   const values = {};
   for (const [key, label, min, max] of [
     ['fullName', 'পুরো নাম', 2, 100],
@@ -35,15 +34,6 @@ export function validateFarmer(input = {}) {
       fields[key] =
         `${label} ${min === 2 ? 'কমপক্ষে ২' : 'কমপক্ষে ৫'} অক্ষরে লিখুন (সর্বোচ্চ ${normalizeBangla(max)} অক্ষর)।`;
   }
-  values.phone = normalizePhone(input.phone);
-  if (!/^01[3-9]\d{8}$/.test(values.phone)) fields.phone = 'বাংলাদেশের ১১ সংখ্যার মোবাইল নম্বর দিন।';
-  values.nid = normalizeDigits(input.nid).replace(/\s/g, '');
-  if (!/^(?:\d{10}|\d{13}|\d{17})$/.test(values.nid))
-    fields.nid = '১০, ১৩ অথবা ১৭ সংখ্যার NID নম্বর দিন।';
-  values.password = typeof input.password === 'string' ? input.password : '';
-  if (values.password.length < 8 || values.password.length > 128)
-    fields.password = 'পাসওয়ার্ড ৮ থেকে ১২৮ অক্ষরের হতে হবে।';
-  if (input.confirmPassword !== values.password) fields.confirmPassword = 'দুটি পাসওয়ার্ড মিলছে না।';
   values.email = typeof input.email === 'string' ? input.email.trim().toLowerCase() || null : null;
   if (
     values.email &&
@@ -53,6 +43,29 @@ export function validateFarmer(input = {}) {
   values.farmName = typeof input.farmName === 'string' ? input.farmName.trim() || null : null;
   if (values.farmName && values.farmName.length > 120)
     fields.farmName = 'খামারের নাম সর্বোচ্চ ১২০ অক্ষরে লিখুন।';
+  return values;
+}
+
+export function validateFarmerProfile(input = {}) {
+  const fields = {};
+  const values = farmerDetails(input, fields);
+  if (Object.keys(fields).length)
+    throw new AppError(422, 'চিহ্নিত তথ্যগুলো ঠিক করে আবার চেষ্টা করুন।', fields);
+  return values;
+}
+
+export function validateFarmer(input = {}) {
+  const fields = {};
+  const values = farmerDetails(input, fields);
+  values.phone = normalizePhone(input.phone);
+  if (!/^01[3-9]\d{8}$/.test(values.phone)) fields.phone = 'বাংলাদেশের ১১ সংখ্যার মোবাইল নম্বর দিন।';
+  values.nid = normalizeDigits(input.nid).replace(/\s/g, '');
+  if (!/^(?:\d{10}|\d{13}|\d{17})$/.test(values.nid))
+    fields.nid = '১০, ১৩ অথবা ১৭ সংখ্যার NID নম্বর দিন।';
+  values.password = typeof input.password === 'string' ? input.password : '';
+  if (values.password.length < 8 || values.password.length > 128)
+    fields.password = 'পাসওয়ার্ড ৮ থেকে ১২৮ অক্ষরের হতে হবে।';
+  if (input.confirmPassword !== values.password) fields.confirmPassword = 'দুটি পাসওয়ার্ড মিলছে না।';
   if (Object.keys(fields).length)
     throw new AppError(422, 'চিহ্নিত তথ্যগুলো ঠিক করে আবার চেষ্টা করুন।', fields);
   return values;

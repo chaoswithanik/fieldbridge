@@ -1,6 +1,4 @@
-import { Link } from 'react-router-dom';
 import {
-  ChevronRight,
   Sprout,
   MapPin,
   UsersRound,
@@ -56,11 +54,6 @@ export default function About() {
     <>
       <section className="about-intro">
         <div className="page-container">
-          <nav aria-label="অবস্থান" className="breadcrumb">
-            <Link to="/">প্রথম পাতা</Link>
-            <ChevronRight size={14} aria-hidden="true" />
-            <span aria-current="page">আমাদের সম্পর্কে</span>
-          </nav>
           <div className="hero-grid">
             <div className="hero-copy">
               <span className="eyebrow">

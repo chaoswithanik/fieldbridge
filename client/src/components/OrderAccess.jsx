@@ -6,7 +6,7 @@ export default function OrderAccess({ children, approval = true }) {
     <AuthGate
       role={user?.role === 'farmer' ? 'farmer' : 'buyer'}
       approvedBuyer={approval && user?.role !== 'farmer'}
-      approvalTitle="অর্ডার পরিচালনার জন্য অনুমোদন প্রয়োজন।"
+      approvalTitle="অর্ডার পরিচালনার জন্য অনুমোদন নেই।"
     >
       {children}
     </AuthGate>
