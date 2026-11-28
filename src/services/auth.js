@@ -210,7 +210,7 @@ export async function login(input = {}) {
   dummyHash ??= hashPassword(randomBytes(32).toString('hex'));
   const valid = await verifyPassword(input.password, user?.passwordHash || (await dummyHash));
   const eligible =
-    user &&
+    user && !user.blocked &&
     (user.role === 'admin' ||
       (user.role === 'buyer' && user.buyerProfile) ||
       (user.role === 'farmer' && user.phoneVerifiedAt && user.farmerProfile));
@@ -218,6 +218,8 @@ export async function login(input = {}) {
     throw new AppError(401, 'ফোন নম্বর বা ইমেইল অথবা পাসওয়ার্ড সঠিক নয়।');
   }
   const session = await sequelize.transaction(async (transaction) => {
+    const account = await models.User.findByPk(user.id, { attributes: ['blocked'], transaction, lock: transaction.LOCK.UPDATE });
+    if (!account || account.blocked) throw new AppError(403, 'এই অ্যাকাউন্টে প্রবেশ বন্ধ আছে।');
     await models.AuthSession.destroy({
       where: { userId: user.id, expiresAt: { [Op.lt]: new Date() } },
       transaction,
@@ -243,7 +245,7 @@ export async function currentUser(token) {
     ],
   });
   const user = session?.user;
-  if (!user) return null;
+  if (!user || user.blocked) return null;
   if (user.role === 'farmer' && (!user.phoneVerifiedAt || !user.farmerProfile)) return null;
   if (user.role === 'buyer' && !user.buyerProfile) return null;
   return publicUser(user);

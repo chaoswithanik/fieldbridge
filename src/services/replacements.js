@@ -84,7 +84,7 @@ function candidateWhere(ctx) {
   return {
     ...matchingCropWhere(ctx.order.snapshot),
     unit: ctx.order.snapshot.unit,
-    status: 'active',
+    hiddenByAdmin: false, status: 'active',
     quantity: { [Op.gt]: 0 },
     farmerId: { [Op.notIn]: ctx.usedFarmers },
   };
@@ -195,7 +195,7 @@ async function preview(ctx, input, transaction) {
     if (!row) throw changed();
     if (!farmers.has(row.farmerId)) {
       const farmer = await models.User.findOne({
-        where: { id: row.farmerId, role: 'farmer', phoneVerifiedAt: { [Op.ne]: null } },
+        where: { id: row.farmerId, role: 'farmer', blocked: false, phoneVerifiedAt: { [Op.ne]: null } },
         attributes: ['fullName', 'phone'],
         include: [
           {

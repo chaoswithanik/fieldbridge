@@ -76,7 +76,7 @@ export default function Navbar() {
           )}
         </NavLink>
       )}
-      <NavLink to={user.role === 'admin' ? '/admin/buyers' : '/account'} className="login-link">
+      <NavLink to={user.role === 'admin' ? '/admin' : '/account'} className="login-link">
         <UserRound size={17} aria-hidden="true" />{' '}
         {user.role === 'admin' ? 'অ্যাডমিন প্যানেল' : 'আমার অ্যাকাউন্ট'}
       </NavLink>

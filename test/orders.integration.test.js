@@ -787,4 +787,50 @@ if (process.env.AUTH_INTEGRATION !== '1') {
     assert.equal((await request('orders?buyerId=someone')).status, 422);
     assert.equal((await request('orders/not-an-id')).status, 404);
   });
+  test('admin panel enforces role, moderation, account access and category membership across the marketplace', async () => {
+    const admin = (path, method = 'GET', body) => request('admin/' + path, { actor: 'admin', method, body });
+    const set = await setup();
+    const listing = set.listings[0];
+    await listing.update({ cropId: 'potato' });
+    await set.requirement.update({ cropId: 'potato' });
+    for (const section of ['overview', 'users', 'listings', 'requirements', 'orders', 'categories']) {
+      assert.equal((await request('admin/' + section, { actor: 'farmer1' })).status, 403);
+      const result = await admin(section);
+      assert.equal(result.status, 200, JSON.stringify(result.data));
+    }
+    const report = await admin('overview?days=7');
+    assert.ok(report.data.totals.farmers >= 3);
+    assert.equal(report.data.report.days, 7);
+    const farmers = (await admin('users?filter=farmer')).data.records;
+    assert.ok(farmers.length && farmers.every(row => row.role === 'farmer' && !('passwordHash' in row)));
+    const saved = await admin('categories', 'POST', { name: 'কন্দ', cropIds: ['potato'] });
+    assert.equal(saved.status, 201, JSON.stringify(saved.data));
+    const category = saved.data.category;
+    const market = () => request('marketplace/listings?category=' + category.id);
+    assert.ok((await market()).data.listings.some(row => row.id === listing.id));
+    const moderation = 'listings/' + listing.id + '/visibility';
+    assert.equal((await admin(moderation, 'PATCH', { hidden: true, version: listing.version })).status, 200);
+    assert.equal((await request('marketplace/listings/' + listing.id)).status, 404);
+    const quoteRequest = () => request('orders/quote', { method: 'POST',
+      body: { requirementId: set.requirement.id, listingIds: [listing.id] } });
+    assert.equal((await quoteRequest()).status, 409);
+    assert.equal((await admin(moderation, 'PATCH', { hidden: false, version: listing.version })).status, 409);
+    await listing.reload();
+    assert.equal((await admin(moderation, 'PATCH', { hidden: false, version: listing.version })).status, 200);
+    assert.equal((await quoteRequest()).status, 200);
+    const change = { name: 'শস্য', cropIds: ['corn'], version: category.version };
+    assert.equal((await admin('categories/' + category.id, 'PUT', change)).status, 200);
+    assert.ok(!(await market()).data.listings.some(row => row.id === listing.id));
+    assert.equal((await admin('categories/' + category.id, 'DELETE', { version: 2 })).status, 200);
+    const access = 'users/' + actors.farmer1.id + '/access';
+    assert.equal((await admin(access, 'PATCH', { blocked: true })).status, 200);
+    assert.equal((await request('orders', { actor: 'farmer1' })).status, 401);
+    assert.equal((await request('marketplace/listings/' + listing.id)).status, 404);
+    assert.equal((await quoteRequest()).status, 409);
+    assert.equal((await admin(access, 'PATCH', { blocked: false })).status, 200);
+    assert.equal((await request('orders', { actor: 'farmer1' })).status, 401);
+    assert.equal((await request('marketplace/listings/' + listing.id)).status, 200);
+    assert.equal((await admin('users/' + actors.admin.id + '/access', 'PATCH', { blocked: true })).status, 404);
+  });
+
 }

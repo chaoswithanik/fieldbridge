@@ -54,6 +54,7 @@ export function ownListing(row) {
     farmAddress: row.farmAddress,
     description: row.description,
     status: row.status,
+    hiddenByAdmin: row.hiddenByAdmin,
     version: row.version,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,

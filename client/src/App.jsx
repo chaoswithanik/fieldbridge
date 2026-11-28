@@ -8,6 +8,7 @@ import Register from './pages/Register.jsx';
 import Login from './pages/Login.jsx';
 import Account from './pages/Account.jsx';
 import BuyerRegister from './pages/BuyerRegister.jsx';
+import { AdminLayout, AdminOverview, AdminDirectory, AdminCategories } from './pages/AdminPanel.jsx';
 import AdminBuyers from './pages/AdminBuyers.jsx';
 import MyListings from './pages/MyListings.jsx';
 import ListingForm from './pages/ListingForm.jsx';
@@ -36,6 +37,8 @@ export default function App() {
       '/notifications': 'নোটিফিকেশন',
       '/register': 'কৃষক নিবন্ধন',
       '/register/buyer': 'ক্রেতা নিবন্ধন',
+      '/admin': 'অ্যাডমিন প্যানেল', '/admin/users': 'ব্যবহারকারী', '/admin/listings': 'ফসলের বিজ্ঞাপন',
+      '/admin/requirements': 'ক্রয় চাহিদা', '/admin/orders': 'অর্ডার', '/admin/categories': 'ফসলের শ্রেণি',
       '/admin/buyers': 'ক্রেতার আবেদন পর্যালোচনা',
       '/login': 'প্রবেশ',
       '/account': 'আমার অ্যাকাউন্ট',
@@ -72,7 +75,12 @@ export default function App() {
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/register" element={<Register />} />
           <Route path="/register/buyer" element={<BuyerRegister />} />
-          <Route path="/admin/buyers" element={<AdminBuyers />} />
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<AdminOverview />} />
+            <Route path="buyers" element={<AdminBuyers />} />
+            <Route path="categories" element={<AdminCategories />} />
+            <Route path=":section" element={<AdminDirectory />} />
+          </Route>
           <Route path="/login" element={<Login />} />
           <Route path="/account" element={<Account />} />
           <Route path="/account/listings" element={<MyListings />} />

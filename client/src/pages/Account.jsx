@@ -42,7 +42,7 @@ export default function Account() {
       </section>
     );
   if (!user) return <Navigate to="/login" state={{ from: '/account' }} replace />;
-  if (user.role === 'admin') return <Navigate to="/admin/buyers" replace />;
+  if (user.role === 'admin') return <Navigate to="/admin" replace />;
   if (user.role === 'buyer') return <BuyerAccount />;
   const profile = user.farmerProfile;
   return (

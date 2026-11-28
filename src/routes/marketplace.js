@@ -12,6 +12,8 @@ import {
   marketAccess,
 } from '../services/marketplace.js';
 
+import { models } from '../models/index.js';
+
 export const marketplaceRouter = Router();
 marketplaceRouter.use(cookieParser());
 marketplaceRouter.use((_req, res, next) => {
@@ -21,6 +23,9 @@ marketplaceRouter.use((_req, res, next) => {
   next();
 });
 
+marketplaceRouter.get('/categories', async (_req, res) => {
+  res.json({ categories: await models.CropCategory.findAll({ attributes: ['id', 'name'], order: [['name', 'ASC']] }) });
+});
 marketplaceRouter.get('/listings/:id/photos/:filename', async (req, res) => {
   if (!photoFilenamePattern.test(req.params.filename))
     throw new AppError(404, 'ছবিটি পাওয়া যায়নি।');

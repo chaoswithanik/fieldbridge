@@ -19,7 +19,7 @@ const visibleFields = [
   'photoFilenames',
   'createdAt',
 ];
-const activeWhere = { status: 'active', quantity: { [Op.gt]: 0 } };
+const activeWhere = { hiddenByAdmin: false, status: 'active', quantity: { [Op.gt]: 0 } };
 
 export function marketFarmerJoin(details = false) {
   return {
@@ -27,7 +27,7 @@ export function marketFarmerJoin(details = false) {
     as: 'farmer',
     required: true,
     attributes: details ? ['fullName', 'phone'] : [],
-    where: { role: 'farmer', phoneVerifiedAt: { [Op.ne]: null } },
+    where: { role: 'farmer', blocked: false, phoneVerifiedAt: { [Op.ne]: null } },
     include: [
       {
         model: models.FarmerProfile,
@@ -81,6 +81,10 @@ export async function searchMarketListings(user, query) {
   const values = marketplaceQuery(query, full);
   const where = { ...activeWhere };
   const conditions = listingLocationConditions(values);
+  if (values.category) {
+    const category = await models.CropCategory.findByPk(values.category);
+    where.cropId = { [Op.in]: category?.cropIds || [] };
+  }
   if (values.q) {
     const exact = resolveCropName(values.q);
     const selections = exact ? [exact] : searchCropCatalog(values.q);

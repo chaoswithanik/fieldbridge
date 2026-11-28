@@ -2,6 +2,7 @@ export { useApiResource as useMarketResource } from './resource.js';
 
 export const marketFilterKeys = [
   'q',
+  'category',
   'district',
   'upazila',
   'unit',

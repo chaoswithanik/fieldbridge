@@ -34,7 +34,7 @@ export async function individualRequirementMatches(buyerId, id, query = {}) {
         where: {
           ...matchingCropWhere(requirement),
           unit: requirement.unit,
-          status: 'active',
+          hiddenByAdmin: false, status: 'active',
           quantity: { [Op.gte]: requirement.quantity, [Op.gt]: 0 },
         },
         attributes: [
@@ -89,7 +89,7 @@ export async function collectiveRequirementMatches(buyerId, id, query = {}) {
         where: {
           ...matchingCropWhere(requirement),
           unit: requirement.unit,
-          status: 'active',
+          hiddenByAdmin: false, status: 'active',
           quantity: { [Op.gt]: 0 },
         },
         attributes: [

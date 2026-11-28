@@ -49,7 +49,7 @@ export default function Login() {
       });
       setForm({ identifier: '', password: '' });
       acceptUser(response.user);
-      navigate(response.user.role === 'admin' ? '/admin/buyers' : destination, {
+      navigate(response.user.role === 'admin' ? '/admin' : destination, {
         replace: true,
       });
     } catch (failure) {
@@ -59,7 +59,7 @@ export default function Login() {
       setBusy(false);
     }
   }
-  if (user) return <Navigate to={user.role === 'admin' ? '/admin/buyers' : destination} replace />;
+  if (user) return <Navigate to={user.role === 'admin' ? '/admin' : destination} replace />;
   return (
     <AuthLayout login>
       <span className="eyebrow">আপনার ফিল্ডব্রিজ অ্যাকাউন্ট</span>

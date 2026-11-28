@@ -40,6 +40,7 @@ try {
         'auth_sessions',
         'purchase_requirements',
         'crop_listings',
+        'crop_categories',
         'buyer_documents',
         'buyer_profiles',
         'phone_verifications',

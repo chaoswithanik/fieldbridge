@@ -13,6 +13,7 @@ export function defineModels(connection, prefix = '') {
       fullName: { type: DataTypes.STRING(100), allowNull: false },
       phone: { type: DataTypes.STRING(11), allowNull: false, unique: true },
       email: { type: DataTypes.STRING(254), allowNull: true, unique: true },
+      blocked: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
       passwordHash: { type: DataTypes.STRING(255), allowNull: false },
       phoneVerifiedAt: { type: DataTypes.DATE, allowNull: true },
     },
@@ -94,6 +95,13 @@ export function defineModels(connection, prefix = '') {
     { ...common, tableName: `${prefix}phone_verifications` },
   );
 
+  const CropCategory = connection.define('CropCategory', {
+    id: { type: DataTypes.UUID, primaryKey: true, defaultValue: DataTypes.UUIDV4 },
+    name: { type: DataTypes.STRING(80), allowNull: false, unique: true },
+    cropIds: { type: DataTypes.JSON, allowNull: false },
+    version: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false, defaultValue: 1 },
+  }, { underscored: true, timestamps: false, tableName: `${prefix}crop_categories` });
+
   const CropListing = connection.define(
     'CropListing',
     {
@@ -103,6 +111,7 @@ export function defineModels(connection, prefix = '') {
       varietyId: { type: DataTypes.STRING(50), allowNull: true },
       cropName: { type: DataTypes.STRING(100), allowNull: false },
       quantity: { type: DataTypes.DECIMAL(12, 3), allowNull: false },
+      hiddenByAdmin: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
       reservedQuantity: { type: DataTypes.DECIMAL(12, 3), allowNull: false, defaultValue: 0 },
       unit: { type: DataTypes.ENUM('kg', 'ton', 'piece'), allowNull: false },
       pricePerUnit: { type: DataTypes.DECIMAL(12, 2), allowNull: false },
@@ -299,6 +308,7 @@ export function defineModels(connection, prefix = '') {
     PhoneVerification,
     AuthSession,
     CropListing,
+    CropCategory,
     PurchaseRequirement,
     Order,
     OrderPortion,

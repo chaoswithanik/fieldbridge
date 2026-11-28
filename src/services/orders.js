@@ -72,14 +72,14 @@ async function selectionPreview(buyerId, input, transaction) {
     });
     if (
       !row ||
-      row.status !== 'active' ||
+      row.hiddenByAdmin || row.status !== 'active' ||
       quantity(row.quantity) <= 0n ||
       row.unit !== requirement.unit
     )
       throw stale();
     if (!farmers.has(row.farmerId)) {
       const farmer = await models.User.findOne({
-        where: { id: row.farmerId, role: 'farmer', phoneVerifiedAt: { [Op.ne]: null } },
+        where: { id: row.farmerId, role: 'farmer', blocked: false, phoneVerifiedAt: { [Op.ne]: null } },
         attributes: ['id', 'fullName', 'phone'],
         include: [
           {

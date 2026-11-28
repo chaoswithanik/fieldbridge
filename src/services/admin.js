@@ -75,6 +75,7 @@ export async function listBuyerApplications(query = {}) {
   if (!Number.isSafeInteger(page) || page < 1 || page > 100000)
     throw new AppError(422, 'পাতার নম্বর সঠিক নয়।');
   const { rows, count } = await models.BuyerProfile.findAndCountAll({
+    distinct: true,
     where: status === 'all' ? {} : { status },
     include: [
       { model: models.User, as: 'user', required: true, where: { role: 'buyer' } },

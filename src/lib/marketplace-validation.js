@@ -4,6 +4,7 @@ import { listingUnits } from './listing-validation.js';
 
 const queryKeys = [
   'q',
+  'category',
   'district',
   'upazila',
   'unit',
@@ -48,6 +49,10 @@ export function marketplaceQuery(input = {}, canViewPrices = false) {
   ]) {
     values[key] = (input[key] || '').trim();
     if (values[key].length > max) fields[key] = 'খোঁজার লেখাটি আরও সংক্ষিপ্ত করুন।';
+  }
+  if (input.category) {
+    if (!/^[a-f0-9-]{36}$/.test(input.category)) fields.category = 'সঠিক শ্রেণি বেছে নিন।';
+    values.category = input.category;
   }
   values.unit = input.unit || '';
   if (values.unit && !listingUnits.includes(values.unit)) fields.unit = 'একটি সঠিক একক বেছে নিন।';

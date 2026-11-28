@@ -30,6 +30,7 @@ export default function Marketplace() {
   const { data, loading, error, reload } = useMarketResource(
     `marketplace/listings${query ? `?${query}` : ''}`,
   );
+  const categories = useMarketResource('marketplace/categories').data?.categories || [];
   const fullAccess =
     error?.status === 403
       ? false
@@ -139,6 +140,8 @@ export default function Marketplace() {
             <span>পরিমাণ, তারিখ{fullAccess ? ' ও দাম' : ''}</span>
           </summary>
           <p className="field-hint">দাম বা পরিমাণ দিয়ে খুঁজতে আগে একক বেছে নিন।</p>
+          {categories.length > 0 && <FormField name="category" label="ফসলের শ্রেণি" value={form.category}
+            onChange={change} optional options={[{ value: '', label: 'সব শ্রেণি' }, ...categories.map(({ id, name }) => ({ value: id, label: name }))]} />}
           <div className="market-filter-sections">
             <fieldset>
               <legend>মজুতের পরিমাণ</legend>
