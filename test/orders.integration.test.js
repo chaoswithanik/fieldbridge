@@ -174,7 +174,8 @@ if (process.env.AUTH_INTEGRATION !== '1') {
     assert.equal((await advance('preparing', version - 1)).status, 409);
     const notices = () => models.Notification.count({ where: { orderId: order.id, recipientId: actors.buyer.id } });
     const before = await notices();
-    for (const stage of ['preparing', 'ready_for_collection', 'collected', 'completed']) {
+    for (const stage of ['preparing', 'ready_for_collection', 'collected', 'delivered', 'completed']) {
+      if (stage === 'delivered') assert.equal((await advance('completed', version)).status, 409);
       const results = await Promise.all([advance(stage, version), advance(stage, version)]);
       for (const result of results) {
         assert.equal(result.status, 200);
@@ -184,7 +185,7 @@ if (process.env.AUTH_INTEGRATION !== '1') {
       }
       version += 1;
     }
-    assert.equal(await notices(), before + 4);
+    assert.equal(await notices(), before + 5);
     assert.equal((await advance('collected', version)).status, 409);
     const latest = (await request(`orders/${order.id}`)).data.order;
     assert.equal(latest.portions.find((p) => p.id === first.id).progress, 'completed');
@@ -193,6 +194,92 @@ if (process.env.AUTH_INTEGRATION !== '1') {
     await set.listings[0].reload();
     assert.equal(set.listings[0].quantity, '0.000');
     assert.equal(set.listings[0].reservedQuantity, '0.000');
+  });
+
+  test('COD delivery and buyer receipt are independent per portion, including after completion', async () => {
+    const set = await setup(['300.000', '300.000']);
+    const order = await place(set);
+    for (const farmer of ['farmer1', 'farmer2']) {
+      const { data } = await respond(order, farmer);
+      let portion = data.order.portions[0];
+      const advance = (progress) => request(`orders/portions/${portion.id}/progress`, {
+        method: 'POST', actor: farmer, body: { progress, version: portion.version },
+      });
+      const receipt = (actor = 'buyer', version = portion.version) => request(
+        `orders/${order.id}/portions/${portion.id}/receipt`, { method: 'POST', actor, body: { version } },
+      );
+      assert.equal((await receipt()).status, 409);
+      for (const stage of ['preparing', 'ready_for_collection', 'collected', 'delivered']) {
+        const result = await advance(stage);
+        assert.equal(result.status, 200);
+        portion = result.data.order.portions[0];
+      }
+      assert.ok(portion.deliveryConfirmedAt);
+      assert.equal(portion.receiptConfirmedAt, null);
+      assert.equal((await receipt('other')).status, 404);
+      assert.equal((await receipt(farmer)).status, 403);
+      assert.equal((await receipt('pending')).status, 403);
+      assert.equal((await receipt('buyer', portion.version - 1)).status, 409);
+      if (farmer === 'farmer2') {
+        const result = await advance('completed');
+        assert.equal(result.status, 200);
+        portion = result.data.order.portions[0];
+      }
+      const notices = () => models.Notification.count({ where: { orderId: order.id, recipientId: actors[farmer].id } });
+      const before = await notices();
+      const replies = await Promise.all([receipt(), receipt()]);
+      for (const reply of replies) {
+        assert.equal(reply.status, 200);
+        const confirmed = reply.data.order.portions.find((p) => p.id === portion.id);
+        assert.ok(confirmed.receiptConfirmedAt);
+        assert.equal(confirmed.deliveryConfirmedAt, portion.deliveryConfirmedAt);
+        assert.equal(confirmed.version, portion.version + 1);
+        assert.equal(confirmed.totalCost, '6000.00');
+        if (farmer === 'farmer1')
+          assert.equal(reply.data.order.portions.find((p) => p.id !== portion.id).receiptConfirmedAt, null);
+      }
+      assert.equal(await notices(), before + 1);
+      if (farmer === 'farmer1') {
+        portion = replies[0].data.order.portions.find((p) => p.id === portion.id);
+        assert.equal((await advance('completed')).status, 200);
+      }
+    }
+  });
+
+  test('simultaneous final updates complete the order once and allow later receipt', async () => {
+    const order = await place(await setup(['300.000', '300.000']));
+    const { updatePortionProgress } = await import('../src/services/orders.js');
+    const confirmations = [];
+    for (const farmer of ['farmer1', 'farmer2']) {
+      let portion = (await respond(order, farmer)).data.order.portions[0];
+      for (const progress of ['preparing', 'ready_for_collection', 'collected', 'delivered']) {
+        portion = (await updatePortionProgress(actors[farmer].id, portion.id, {
+          progress, version: portion.version,
+        })).portions[0];
+      }
+      confirmations.push(() => updatePortionProgress(actors[farmer].id, portion.id, {
+        progress: 'completed', version: portion.version,
+      }));
+    }
+    const before = (await request(`orders/${order.id}`)).data.order;
+    assert.equal(before.status, 'accepted');
+    assert.equal(before.completedAt, null);
+    const results = await Promise.all(confirmations.map((finish) => finish()));
+    assert.ok(results.every((row) => row.status === 'portion_completed'));
+    await confirmations[1]();
+    const completed = (await request(`orders/${order.id}`)).data.order;
+    assert.equal(completed.status, 'completed');
+    assert.ok(completed.completedAt);
+    assert.ok(completed.portions.every((p) => !p.receiptConfirmedAt));
+    assert.equal((await request('orders')).data.orders.find((o) => o.id === order.id).status, 'completed');
+    const first = completed.portions[0];
+    const receipt = await request(`orders/${order.id}/portions/${first.id}/receipt`, {
+      method: 'POST', body: { version: first.version },
+    });
+    assert.equal(receipt.data.order.completedAt, completed.completedAt);
+    assert.equal(await models.Notification.count({ where: {
+      orderId: order.id, recipientId: actors.buyer.id, title: 'অর্ডার সম্পন্ন হয়েছে',
+    } }), 1);
   });
 
   test('quotes reserve nothing; confirmation reserves only the individual requested quantity, snapshots details and atomically creates notifications', async () => {

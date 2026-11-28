@@ -255,6 +255,11 @@ export async function previewOrder(buyerId, input, parentTransaction) {
     },
   );
 }
+function portionProgress(portion) {
+  if (portion.progress === 'collected' && portion.deliveryConfirmedAt) return 'delivered';
+  return portion.progress ?? (portion.status === 'accepted' ? 'accepted' : null);
+}
+
 export async function fetchOrder(user, id, transaction) {
   if (!uuidPattern.test(id || '')) throw new AppError(404, 'অর্ডারটি খুঁজে পাওয়া যায়নি।');
   const order = await models.Order.findOne({
@@ -262,6 +267,7 @@ export async function fetchOrder(user, id, transaction) {
     attributes: [
       'id',
       'requirementId',
+      'completedAt',
       'mode',
       'snapshot',
       'totalQuantity',
@@ -284,6 +290,8 @@ export async function fetchOrder(user, id, transaction) {
           'snapshot',
           'version',
           'respondedAt',
+          'deliveryConfirmedAt',
+          'receiptConfirmedAt',
           'progress',
           'replacementId',
           'createdAt',
@@ -313,7 +321,9 @@ export async function fetchOrder(user, id, transaction) {
     id: portion.id,
     isReplacement: Boolean(portion.replacementId),
     status: portion.status,
-    progress: portion.progress ?? (portion.status === 'accepted' ? 'accepted' : null),
+    progress: portionProgress(portion),
+    deliveryConfirmedAt: portion.deliveryConfirmedAt,
+    receiptConfirmedAt: portion.receiptConfirmedAt,
     quantity: portion.quantity,
     totalCost: portion.totalCost,
     farmer: portion.snapshot,
@@ -335,6 +345,7 @@ export async function fetchOrder(user, id, transaction) {
         )
       : order.totalQuantity;
   const { requestedQuantity, ...farmerSnapshot } = order.snapshot;
+  const summary = summarizePortions(portions, own ? amount : requestedQuantity, own ? amount : order.totalQuantity);
   return {
     id: order.id,
     ...(own ? {} : { requirementId: order.requirementId, version: order.version }),
@@ -347,11 +358,9 @@ export async function fetchOrder(user, id, transaction) {
           2,
         )
       : order.totalCost,
-    ...summarizePortions(
-      portions,
-      own ? amount : requestedQuantity,
-      own ? amount : order.totalQuantity,
-    ),
+    ...summary,
+    ...(own && summary.status === 'completed' ? { status: 'portion_completed' } : {}),
+    ...(own ? {} : { completedAt: order.completedAt }),
     portions,
     createdAt: order.createdAt,
     updatedAt: order.updatedAt,
@@ -492,6 +501,18 @@ async function lockFarmerPortion(farmerId, portionId, transaction) {
   });
   return { order, portion };
 }
+// Call with the parent order locked, in the same transaction as the portion change.
+async function recordOrderCompletion(order, summary, transaction) {
+  if (order.completedAt || summary.status !== 'completed') return;
+  await order.update({ completedAt: new Date(), version: order.version + 1 }, { transaction });
+  await models.Notification.create({
+    recipientId: order.buyerId,
+    orderId: order.id,
+    title: 'অর্ডার সম্পন্ন হয়েছে',
+    message: `${order.snapshot.cropName}-এর অর্ডারে সব সরবরাহকারী কৃষক তাঁদের অংশ সম্পন্ন করেছেন।`,
+  }, { transaction });
+}
+
 export async function respondToOrder(farmerId, portionId, input, parentTransaction) {
   const { decision, version } = orderDecision(input);
   if (!uuidPattern.test(portionId || ''))
@@ -522,6 +543,7 @@ export async function respondToOrder(farmerId, portionId, input, parentTransacti
         order.snapshot.requestedQuantity,
         order.totalQuantity,
       );
+      await recordOrderCompletion(order, summary, transaction);
       const unit = { kg: 'কেজি', ton: 'মেট্রিক টন', piece: 'পিস' }[order.snapshot.unit];
       const amount = (value) =>
         new Intl.NumberFormat('bn-BD', { maximumFractionDigits: 3 }).format(Number(value));
@@ -554,19 +576,62 @@ export async function updatePortionProgress(farmerId, portionId, input) {
       const { order, portion } = await lockFarmerPortion(farmerId, portionId, transaction);
       if (portion.status !== 'accepted')
         throw new AppError(409, 'শুধু গৃহীত অংশের অগ্রগতি বদলানো যায়।');
-      if (portion.progress !== progress) {
-        if (portion.version !== version || nextProgressStage(portion.progress ?? 'accepted') !== progress)
+      const current = portionProgress(portion);
+      if (current !== progress && !(progress === 'delivered' && portion.deliveryConfirmedAt)) {
+        // Older completed portions may still need an explicit COD confirmation.
+        const historicalDelivery = current === 'completed' && progress === 'delivered';
+        if (portion.version !== version || (!historicalDelivery && nextProgressStage(current) !== progress))
           throw new AppError(409, 'সর্বশেষ অগ্রগতি দেখে পরবর্তী ধাপ বেছে নিন।');
         if (progress === 'completed') await releaseReservation(portionId, transaction, false);
-        await portion.update({ progress, version: version + 1 }, { transaction });
+        const update = progress === 'delivered' ? { deliveryConfirmedAt: new Date() } : { progress };
+        await portion.update({ ...update, version: version + 1 }, { transaction });
         await models.Notification.create({
           recipientId: order.buyerId,
           orderId: order.id,
-          title: 'সরবরাহের অগ্রগতি',
+          title: progress === 'delivered' ? 'ডেলিভারি ও নগদ মূল্য গ্রহণ করেছেন কৃষক' : 'সরবরাহের অগ্রগতি',
           message: `${portion.snapshot.fullName} · ${order.snapshot.cropName} · ${progressLabels[progress]}।`,
         }, { transaction });
+        if (progress === 'completed') {
+          const portions = await models.OrderPortion.findAll({
+            where: { orderId: order.id },
+            attributes: ['status', 'progress', 'quantity', 'totalCost'],
+            transaction,
+          });
+          const summary = summarizePortions(portions, order.snapshot.requestedQuantity, order.totalQuantity);
+          await recordOrderCompletion(order, summary, transaction);
+        }
       }
       return fetchOrder({ id: farmerId, role: 'farmer' }, order.id, transaction);
     },
   );
+}
+
+export async function confirmPortionReceipt(buyerId, orderId, portionId, input) {
+  onlyOrderFields(input, ['version']);
+  if (!Number.isSafeInteger(input.version) || input.version < 1)
+    throw new AppError(422, 'অর্ডারের সর্বশেষ সংস্করণ দিন।');
+  if (!uuidPattern.test(orderId) || !uuidPattern.test(portionId))
+    throw new AppError(404, 'অর্ডারের অংশটি খুঁজে পাওয়া যায়নি।');
+  return sequelize.transaction({ isolationLevel: Transaction.ISOLATION_LEVELS.READ_COMMITTED }, async (transaction) => {
+    await assertApprovedOrderBuyer(buyerId, transaction);
+    const order = await models.Order.findOne({
+      where: { id: orderId, buyerId }, transaction, lock: transaction.LOCK.UPDATE,
+    });
+    if (!order) throw new AppError(404, 'অর্ডারটি খুঁজে পাওয়া যায়নি।');
+    const portion = await models.OrderPortion.findOne({
+      where: { id: portionId, orderId }, transaction, lock: transaction.LOCK.UPDATE,
+    });
+    if (!portion) throw new AppError(404, 'অর্ডারের অংশটি খুঁজে পাওয়া যায়নি।');
+    if (!portion.receiptConfirmedAt) {
+      if (!portion.deliveryConfirmedAt || portion.version !== input.version)
+        throw new AppError(409, 'ডেলিভারির সর্বশেষ তথ্য দেখে প্রাপ্তি নিশ্চিত করুন।');
+      await portion.update({ receiptConfirmedAt: new Date(), version: portion.version + 1 }, { transaction });
+      await models.Notification.create({
+        recipientId: portion.farmerId, orderId,
+        title: 'ক্রেতা পণ্য বুঝে পেয়েছেন',
+        message: `${order.snapshot.buyerName} আপনার সরবরাহ করা ${order.snapshot.cropName} বুঝে পাওয়ার বিষয়টি নিশ্চিত করেছেন।`,
+      }, { transaction });
+    }
+    return fetchOrder({ id: buyerId, role: 'buyer' }, orderId, transaction);
+  });
 }

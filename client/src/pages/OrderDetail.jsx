@@ -18,6 +18,34 @@ import {
 import PortionProgress from '../components/PortionProgress.jsx';
 import { progressLabels } from '../../../shared/order-progress.js';
 
+function confirmationCopy({ portion, receipt, progress, decision }) {
+  if (receipt) return {
+    title: 'এই অংশের পণ্য বুঝে পেয়েছেন?',
+    detail: `${portion.farmer.fullName}-এর কাছ থেকে এই অংশের পণ্য বুঝে পেলে নিশ্চিত করুন।`,
+    confirm: 'প্রাপ্তি নিশ্চিত করুন',
+  };
+  if (progress === 'delivered') return {
+    title: 'পণ্য পৌঁছে দিয়ে নগদ মূল্য পেয়েছেন?',
+    detail: `ক্রেতার নির্ধারিত ঠিকানায় পণ্য পৌঁছে দিয়ে এই অংশের পুরো মূল্য ${formatMoney(portion.totalCost)} নগদ পেলে নিশ্চিত করুন।`,
+    confirm: 'ডেলিভারি ও নগদ গ্রহণ নিশ্চিত করুন',
+  };
+  if (progress) return {
+    title: 'সরবরাহের অগ্রগতি বদলাবেন?',
+    detail: `পরবর্তী ধাপ — ${progressLabels[progress]}। ক্রেতা এই পরিবর্তনের খবর পাবেন।`,
+    confirm: 'ধাপ নিশ্চিত করুন',
+  };
+  if (decision === 'rejected') return {
+    title: 'নিজের অংশ প্রত্যাখ্যান করবেন?',
+    detail: 'এই অংশের সব বিজ্ঞাপনের মজুতের সংরক্ষণ ছেড়ে দেওয়া হবে। উত্তর দেওয়ার পর সিদ্ধান্ত বদলানো যাবে না।',
+    confirm: 'প্রত্যাখ্যান নিশ্চিত করুন',
+  };
+  return {
+    title: 'নিজের অংশ গ্রহণ করবেন?',
+    detail: 'এই পরিমাণ সরবরাহে আপনার সম্মতি সংরক্ষিত হবে। মজুত এই অর্ডারের জন্য সংরক্ষিত থাকবে। উত্তর দেওয়ার পর সিদ্ধান্ত বদলানো যাবে না।',
+    confirm: 'গ্রহণ নিশ্চিত করুন',
+  };
+}
+
 function ResponseDialog({
   action,
   cropName,
@@ -29,6 +57,7 @@ function ResponseDialog({
   onConfirm,
   onReload,
 }) {
+  const copy = confirmationCopy(action);
   const dialog = useRef(null),
     rejecting = action.decision === 'rejected';
   useEffect(() => {
@@ -46,21 +75,13 @@ function ResponseDialog({
         if (!busy) onClose();
       }}
     >
-      <h2 id="order-response-title">
-        {action.progress ? 'সরবরাহের অগ্রগতি বদলাবেন?' : rejecting ? 'নিজের অংশ প্রত্যাখ্যান করবেন?' : 'নিজের অংশ গ্রহণ করবেন?'}
-      </h2>
+      <h2 id="order-response-title">{copy.title}</h2>
       <p>
         <strong>
           {cropName} · {formatAmount(action.portion.quantity)} {unit}
         </strong>
       </p>
-      <p>
-        {action.progress
-          ? `পরবর্তী ধাপ — ${progressLabels[action.progress]}। ক্রেতা এই পরিবর্তনের খবর পাবেন।`
-          : rejecting
-          ? 'এই অংশের সব বিজ্ঞাপনের মজুতের সংরক্ষণ ছেড়ে দেওয়া হবে। উত্তর দেওয়ার পর সিদ্ধান্ত বদলানো যাবে না।'
-          : 'এই পরিমাণ সরবরাহে আপনার সম্মতি সংরক্ষিত হবে। মজুত এই অর্ডারের জন্য সংরক্ষিত থাকবে। উত্তর দেওয়ার পর সিদ্ধান্ত বদলানো যাবে না।'}
-      </p>
+      <p>{copy.detail}</p>
       {error && (
         <p className="form-alert" role="alert">
           {error}
@@ -81,7 +102,7 @@ function ResponseDialog({
             onClick={onConfirm}
           >
             {busy && <LoaderCircle className="spin" size={16} aria-hidden="true" />}
-            {action.progress ? 'ধাপ নিশ্চিত করুন' : rejecting ? 'প্রত্যাখ্যান নিশ্চিত করুন' : 'গ্রহণ নিশ্চিত করুন'}
+            {copy.confirm}
           </button>
         )}
       </div>
@@ -101,6 +122,11 @@ function OrderContent() {
   useEffect(() => {
     if ([401, 403].includes(error?.status)) refresh();
   }, [error, refresh]);
+  function openAction(next) {
+    setResponseError('');
+    setStale(false);
+    setAction(next);
+  }
   async function respond() {
     if (busy) return;
     setBusy(true);
@@ -108,9 +134,12 @@ function OrderContent() {
     try {
       const endpoint = action.progress ? 'progress' : 'respond';
       const change = action.progress ? { progress: action.progress } : { decision: action.decision };
-      const result = await apiRequest(`orders/portions/${action.portion.id}/${endpoint}`, {
+      const path = action.receipt
+        ? `orders/${id}/portions/${action.portion.id}/receipt`
+        : `orders/portions/${action.portion.id}/${endpoint}`;
+      const result = await apiRequest(path, {
         method: 'POST',
-        body: JSON.stringify({ ...change, version: action.portion.version }),
+        body: JSON.stringify({ ...(action.receipt ? {} : change), version: action.portion.version }),
       });
       setAction(null);
       replaceData(result);
@@ -173,6 +202,7 @@ function OrderContent() {
       )}
       <div className="order-overview">
         <span className={`order-badge order-${order.status}`}>{orderLabels[order.status]}</span>
+        {order.completedAt && <p className="field-hint">সম্পন্ন হিসেবে নথিভুক্ত · {orderDate(order.completedAt)}</p>}
         <dl className="combination-figures">
           <div>
             <dt>{farmer ? 'আপনার সরবরাহ' : 'বর্তমান সরবরাহ'}</dt>
@@ -278,12 +308,40 @@ function OrderContent() {
               <PortionProgress
                 progress={portion.progress}
                 busy={busy}
-                onAdvance={farmer ? (progress) => {
-                  setResponseError('');
-                  setStale(false);
-                  setAction({ portion, progress });
-                } : undefined}
+                historicalCompletion={portion.progress === 'completed' && !portion.deliveryConfirmedAt}
+                onAdvance={farmer ? (progress) => openAction({ portion, progress }) : undefined}
               />
+            )}
+            {portion.status === 'accepted' && (
+              <section className="portion-cod" aria-label="ডেলিভারি ও নগদ পরিশোধ">
+                <h3>ক্যাশ অন ডেলিভারি · {formatMoney(portion.totalCost)}</h3>
+                {portion.deliveryConfirmedAt ? (
+                  <>
+                    <p>কৃষক পণ্য পৌঁছে দিয়ে নগদ মূল্য পেয়েছেন · {orderDate(portion.deliveryConfirmedAt)}</p>
+                    <p>{portion.receiptConfirmedAt
+                      ? `ক্রেতা পণ্য বুঝে পেয়েছেন · ${orderDate(portion.receiptConfirmedAt)}`
+                      : 'ক্রেতার প্রাপ্তি নিশ্চিতকরণের অপেক্ষায়'}</p>
+                    {!farmer && !portion.receiptConfirmedAt && (
+                      <button className="button button-secondary" disabled={busy}
+                        onClick={() => openAction({ portion, receipt: true })}>
+                        পণ্য বুঝে পেয়েছি
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <p>{portion.progress === 'completed'
+                      ? 'এই অংশের ডেলিভারি ও নগদ মূল্য পাওয়ার তথ্য নথিভুক্ত হয়নি।'
+                      : 'কৃষক ডেলিভারির ঠিকানায় পণ্য পৌঁছে দিলে ক্রেতা এই মূল্য নগদ দেবেন।'}</p>
+                    {farmer && portion.progress === 'completed' && (
+                      <button className="button button-secondary" disabled={busy}
+                        onClick={() => openAction({ portion, progress: 'delivered' })}>
+                        ডেলিভারি ও নগদ মূল্য পাওয়া নথিভুক্ত করুন
+                      </button>
+                    )}
+                  </>
+                )}
+              </section>
             )}
             {farmer && portion.status === 'pending' && (
               <div className="order-response-actions">

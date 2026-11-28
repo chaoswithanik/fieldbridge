@@ -15,6 +15,7 @@ import {
   listOrders,
   respondToOrder,
   updatePortionProgress,
+  confirmPortionReceipt,
 } from '../services/orders.js';
 export const ordersRouter = Router();
 ordersRouter.use(...requireRole(['buyer', 'farmer']));
@@ -60,6 +61,10 @@ ordersRouter.post('/portions/:id/progress', mutations, async (req, res) => {
     throw new AppError(403, 'শুধু সংশ্লিষ্ট কৃষক সরবরাহের অগ্রগতি বদলাতে পারবেন।');
   const order = await updatePortionProgress(req.user.id, req.params.id, req.body);
   res.json({ success: true, order, message: 'সরবরাহের অগ্রগতি সংরক্ষিত হয়েছে।' });
+});
+ordersRouter.post('/:id/portions/:portionId/receipt', buyer, mutations, async (req, res) => {
+  const order = await confirmPortionReceipt(req.user.id, req.params.id, req.params.portionId, req.body);
+  res.json({ success: true, order, message: 'পণ্য বুঝে পাওয়ার তথ্য সংরক্ষিত হয়েছে।' });
 });
 ordersRouter.get('/:id', async (req, res) =>
   res.json({ success: true, order: await readOrder(req.user, req.params.id) }),

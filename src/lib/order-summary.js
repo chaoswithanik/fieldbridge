@@ -9,6 +9,9 @@ export function summarizePortions(portions, requested, originallyOrdered = reque
   const active = sums.accepted + sums.pending,
     target = scaledDecimal(originallyOrdered, 3);
   const missing = target > active ? target - active : 0n;
+  const allFinished = portions.every((portion) =>
+    portion.status === 'rejected' || portion.progress === 'completed',
+  );
   const status =
     sums.pending > 0n
       ? 'awaiting_response'
@@ -16,7 +19,7 @@ export function summarizePortions(portions, requested, originallyOrdered = reque
         ? 'rejected'
         : missing > 0n
           ? 'partially_accepted'
-          : 'accepted';
+          : allFinished ? 'completed' : 'accepted';
   return {
     status,
     acceptedQuantity: decimalString(sums.accepted, 3),

@@ -56,3 +56,14 @@ test('quantities above the original order cannot produce negative replacement ga
   assert.equal(summary.replacementNeededQuantity, '0.000');
   assert.equal(summary.unfulfilledQuantity, '0.000');
 });
+
+test('completion covers the ordered quantity, includes replacements, and excludes unresolved portions', () => {
+  const finished = (quantity) => ({ ...portion('accepted', quantity), progress: 'completed' });
+  const status = (...portions) => summarizePortions(portions, '1000.000', '800.000').status;
+  assert.equal(status(finished('800.000')), 'completed');
+  assert.equal(status(finished('600.000'), portion('rejected', '200.000')), 'partially_accepted');
+  assert.equal(status(finished('600.000'), portion('rejected', '200.000'), finished('200.000')), 'completed');
+  assert.equal(status(finished('800.000'), portion('pending', '50.000')), 'awaiting_response');
+  assert.equal(status(finished('800.000'), portion('accepted', '50.000')), 'accepted');
+  assert.equal(status(portion('rejected', '800.000')), 'rejected');
+});

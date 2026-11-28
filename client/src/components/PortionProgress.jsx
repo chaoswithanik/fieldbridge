@@ -2,12 +2,13 @@ import { Check } from 'lucide-react';
 import { progressStages, progressLabels, progressActions } from '../../../shared/order-progress.js';
 import { bangla } from '../lib/registration.js';
 
-export default function PortionProgress({ progress, onAdvance, busy }) {
-  const current = progressStages.indexOf(progress);
+export default function PortionProgress({ progress, onAdvance, busy, historicalCompletion }) {
+  const stages = historicalCompletion ? progressStages.filter((stage) => stage !== 'delivered') : progressStages;
+  const current = stages.indexOf(progress);
 
   return (
     <ol className="portion-progress" aria-label="সরবরাহের ধাপ">
-      {progressStages.map((stage, index) => {
+      {stages.map((stage, index) => {
         const reached = index <= current;
         const isCurrent = index === current;
         const actionable = onAdvance && index === current + 1;

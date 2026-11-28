@@ -5,6 +5,8 @@ export const responseLabels = {
   rejected: 'প্রত্যাখ্যান করেছেন',
 };
 export const orderLabels = {
+  completed: 'অর্ডার সম্পন্ন',
+  portion_completed: 'আপনার অংশ সম্পন্ন',
   awaiting_response: 'কৃষকের উত্তরের অপেক্ষায়',
   accepted: 'সব অংশ গৃহীত',
   partially_accepted: 'কিছু অংশ গৃহীত',

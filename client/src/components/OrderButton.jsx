@@ -146,6 +146,7 @@ function OrderPreview({ requirementId, replacementOrderId, listingIds, onClose }
           </div>
           <h3>ডেলিভারির ঠিকানা</h3>
           <p className="order-preserve-text">{preview.deliveryAddress}</p>
+          <p>প্রতিটি কৃষক এই ঠিকানায় তাঁর অংশ পৌঁছে দেবেন। পণ্য বুঝে নেওয়ার সময় তাঁকে সেই অংশের মূল্য নগদ দিন।</p>
           {preview.instructions && (
             <>
               <h3>কৃষকের জন্য নির্দেশনা</h3>
