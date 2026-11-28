@@ -14,6 +14,7 @@ import {
   readOrder,
   listOrders,
   respondToOrder,
+  updatePortionProgress,
 } from '../services/orders.js';
 export const ordersRouter = Router();
 ordersRouter.use(...requireRole(['buyer', 'farmer']));
@@ -53,6 +54,12 @@ ordersRouter.post('/portions/:id/respond', mutations, async (req, res) => {
     order: await respondToOrder(req.user.id, req.params.id, req.body),
     message: 'আপনার উত্তর সংরক্ষিত হয়েছে।',
   });
+});
+ordersRouter.post('/portions/:id/progress', mutations, async (req, res) => {
+  if (req.user.role !== 'farmer')
+    throw new AppError(403, 'শুধু সংশ্লিষ্ট কৃষক সরবরাহের অগ্রগতি বদলাতে পারবেন।');
+  const order = await updatePortionProgress(req.user.id, req.params.id, req.body);
+  res.json({ success: true, order, message: 'সরবরাহের অগ্রগতি সংরক্ষিত হয়েছে।' });
 });
 ordersRouter.get('/:id', async (req, res) =>
   res.json({ success: true, order: await readOrder(req.user, req.params.id) }),

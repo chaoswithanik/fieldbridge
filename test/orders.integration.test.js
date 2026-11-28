@@ -157,6 +157,44 @@ if (process.env.AUTH_INTEGRATION !== '1') {
     });
   }
 
+  test('only the assigned farmer advances an accepted portion, one stage at a time', async () => {
+    const set = await setup(['300.000', '300.000']);
+    const order = await place(set);
+    const first = order.portions.find((p) => p.farmer.phone === actors.farmer1.phone);
+    const advance = (progress, version, actor = 'farmer1') =>
+      request(`orders/portions/${first.id}/progress`, { method: 'POST', body: { progress, version }, actor });
+    assert.equal((await advance('preparing', first.version)).status, 409);
+    const accepted = await respond(order, 'farmer1');
+    const initial = accepted.data.order.portions[0];
+    assert.equal(initial.progress, 'accepted');
+    let version = initial.version;
+    assert.equal((await advance('preparing', version, 'farmer2')).status, 404);
+    assert.equal((await advance('preparing', version, 'buyer')).status, 403);
+    assert.equal((await advance('completed', version)).status, 409);
+    assert.equal((await advance('preparing', version - 1)).status, 409);
+    const notices = () => models.Notification.count({ where: { orderId: order.id, recipientId: actors.buyer.id } });
+    const before = await notices();
+    for (const stage of ['preparing', 'ready_for_collection', 'collected', 'completed']) {
+      const results = await Promise.all([advance(stage, version), advance(stage, version)]);
+      for (const result of results) {
+        assert.equal(result.status, 200);
+        assert.equal(result.data.order.portions.length, 1);
+        assert.equal(result.data.order.portions[0].progress, stage);
+        assert.equal(result.data.order.portions[0].version, version + 1);
+      }
+      version += 1;
+    }
+    assert.equal(await notices(), before + 4);
+    assert.equal((await advance('collected', version)).status, 409);
+    const latest = (await request(`orders/${order.id}`)).data.order;
+    assert.equal(latest.portions.find((p) => p.id === first.id).progress, 'completed');
+    assert.equal(latest.portions.find((p) => p.id !== first.id).progress, null);
+    assert.equal(latest.acceptedQuantity, '300.000');
+    await set.listings[0].reload();
+    assert.equal(set.listings[0].quantity, '0.000');
+    assert.equal(set.listings[0].reservedQuantity, '0.000');
+  });
+
   test('quotes reserve nothing; confirmation reserves only the individual requested quantity, snapshots details and atomically creates notifications', async () => {
     const set = await setup(),
       quoted = await quote(set);

@@ -29,6 +29,9 @@ export function useApiResource(path) {
       : state.key === key && !authLoading
         ? state
         : { data: null, loading: true, error: null }),
+    replaceData: (data) => setState((current) =>
+      current.key === key ? { key, data, loading: false, error: null } : current,
+    ),
     reload: () => setRevision((value) => value + 1),
   };
 }

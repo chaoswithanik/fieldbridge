@@ -197,6 +197,10 @@ export function defineModels(connection, prefix = '') {
       quantity: { type: DataTypes.DECIMAL(13, 3), allowNull: false },
       totalCost: { type: DataTypes.DECIMAL(24, 2), allowNull: false },
       version: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false, defaultValue: 1 },
+      progress: {
+        type: DataTypes.ENUM('preparing', 'ready_for_collection', 'collected', 'completed'),
+        allowNull: true,
+      },
       respondedAt: { type: DataTypes.DATE, allowNull: true },
     },
     { ...common, tableName: `${prefix}order_portions` },

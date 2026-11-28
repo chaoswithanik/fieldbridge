@@ -15,6 +15,9 @@ import {
   formatMoney,
   notificationsChanged,
 } from '../lib/orders.js';
+import PortionProgress from '../components/PortionProgress.jsx';
+import { progressLabels } from '../../../shared/order-progress.js';
+
 function ResponseDialog({
   action,
   cropName,
@@ -44,7 +47,7 @@ function ResponseDialog({
       }}
     >
       <h2 id="order-response-title">
-        {rejecting ? 'নিজের অংশ প্রত্যাখ্যান করবেন?' : 'নিজের অংশ গ্রহণ করবেন?'}
+        {action.progress ? 'সরবরাহের অগ্রগতি বদলাবেন?' : rejecting ? 'নিজের অংশ প্রত্যাখ্যান করবেন?' : 'নিজের অংশ গ্রহণ করবেন?'}
       </h2>
       <p>
         <strong>
@@ -52,7 +55,9 @@ function ResponseDialog({
         </strong>
       </p>
       <p>
-        {rejecting
+        {action.progress
+          ? `পরবর্তী ধাপ — ${progressLabels[action.progress]}। ক্রেতা এই পরিবর্তনের খবর পাবেন।`
+          : rejecting
           ? 'এই অংশের সব বিজ্ঞাপনের মজুতের সংরক্ষণ ছেড়ে দেওয়া হবে। উত্তর দেওয়ার পর সিদ্ধান্ত বদলানো যাবে না।'
           : 'এই পরিমাণ সরবরাহে আপনার সম্মতি সংরক্ষিত হবে। মজুত এই অর্ডারের জন্য সংরক্ষিত থাকবে। উত্তর দেওয়ার পর সিদ্ধান্ত বদলানো যাবে না।'}
       </p>
@@ -62,11 +67,11 @@ function ResponseDialog({
         </p>
       )}
       <div className="listing-dialog-actions">
-        <button className="button button-secondary" disabled={busy} onClick={onClose} autoFocus>
+        <button className="button button-secondary" disabled={busy} onClick={onClose}>
           ফিরে যান
         </button>
         {stale ? (
-          <button className="button button-primary" onClick={onReload}>
+          <button className="button button-primary" disabled={busy} onClick={onReload}>
             সর্বশেষ অর্ডার দেখুন
           </button>
         ) : (
@@ -76,7 +81,7 @@ function ResponseDialog({
             onClick={onConfirm}
           >
             {busy && <LoaderCircle className="spin" size={16} aria-hidden="true" />}
-            {rejecting ? 'প্রত্যাখ্যান নিশ্চিত করুন' : 'গ্রহণ নিশ্চিত করুন'}
+            {action.progress ? 'ধাপ নিশ্চিত করুন' : rejecting ? 'প্রত্যাখ্যান নিশ্চিত করুন' : 'গ্রহণ নিশ্চিত করুন'}
           </button>
         )}
       </div>
@@ -87,12 +92,12 @@ function OrderContent() {
   const { id } = useParams(),
     { user, refresh } = useAuth(),
     location = useLocation();
-  const { data, loading, error, reload } = useApiResource(`orders/${id}`);
+  const { data, loading, error, reload, replaceData } = useApiResource(`orders/${id}`);
   const [action, setAction] = useState(null),
     [busy, setBusy] = useState(false),
     [responseError, setResponseError] = useState(''),
     [stale, setStale] = useState(false),
-    [message, setMessage] = useState(location.state?.orderMessage || '');
+    [feedback, setFeedback] = useState(null);
   useEffect(() => {
     if ([401, 403].includes(error?.status)) refresh();
   }, [error, refresh]);
@@ -101,14 +106,16 @@ function OrderContent() {
     setBusy(true);
     setResponseError('');
     try {
-      const result = await apiRequest(`orders/portions/${action.portion.id}/respond`, {
+      const endpoint = action.progress ? 'progress' : 'respond';
+      const change = action.progress ? { progress: action.progress } : { decision: action.decision };
+      const result = await apiRequest(`orders/portions/${action.portion.id}/${endpoint}`, {
         method: 'POST',
-        body: JSON.stringify({ decision: action.decision, version: action.portion.version }),
+        body: JSON.stringify({ ...change, version: action.portion.version }),
       });
       setAction(null);
-      setMessage(result.message);
+      replaceData(result);
+      setFeedback({ portionId: action.portion.id, message: result.message });
       notificationsChanged();
-      reload();
     } catch (failure) {
       setResponseError(failure.message);
       if (failure.status === 409) setStale(true);
@@ -159,9 +166,9 @@ function OrderContent() {
           </p>
         </div>
       </div>
-      {message && (
+      {location.state?.orderMessage && !feedback && (
         <p className="success-note" role="status">
-          {message}
+          {location.state.orderMessage}
         </p>
       )}
       <div className="order-overview">
@@ -267,6 +274,17 @@ function OrderContent() {
             {portion.respondedAt && (
               <p className="field-hint">উত্তর দিয়েছেন {orderDate(portion.respondedAt)}</p>
             )}
+            {portion.progress && (
+              <PortionProgress
+                progress={portion.progress}
+                busy={busy}
+                onAdvance={farmer ? (progress) => {
+                  setResponseError('');
+                  setStale(false);
+                  setAction({ portion, progress });
+                } : undefined}
+              />
+            )}
             {farmer && portion.status === 'pending' && (
               <div className="order-response-actions">
                 <button
@@ -293,6 +311,9 @@ function OrderContent() {
                 </button>
               </div>
             )}
+            {feedback?.portionId === portion.id && (
+              <p className="success-note" role="status">{feedback.message}</p>
+            )}
           </article>
         ))}
       </div>
@@ -306,9 +327,18 @@ function OrderContent() {
           stale={stale}
           onClose={() => setAction(null)}
           onConfirm={respond}
-          onReload={() => {
-            setAction(null);
-            reload();
+          onReload={async () => {
+            setBusy(true);
+            try {
+              replaceData(await apiRequest(`orders/${id}`));
+              setAction(null);
+              setFeedback(null);
+            } catch (failure) {
+              setResponseError(failure.message);
+              if ([401, 403].includes(failure.status)) refresh();
+            } finally {
+              setBusy(false);
+            }
           }}
         />
       )}

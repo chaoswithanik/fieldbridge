@@ -10,11 +10,13 @@ import {
   orderSelection,
   orderSubmission,
   orderDecision,
+  onlyOrderFields,
   privatePage,
   uuidPattern,
 } from '../lib/order-validation.js';
 import { findOwnRequirement } from './requirements.js';
 import { summarizePortions } from '../lib/order-summary.js';
+import { nextProgressStage, progressLabels, progressStages } from '../../shared/order-progress.js';
 const quantity = (value) => scaledDecimal(value, 3);
 const cost = (amount, price) => (quantity(amount) * scaledDecimal(price, 2) + 500n) / 1000n;
 const stale = () =>
@@ -282,6 +284,7 @@ export async function fetchOrder(user, id, transaction) {
           'snapshot',
           'version',
           'respondedAt',
+          'progress',
           'replacementId',
           'createdAt',
         ],
@@ -310,6 +313,7 @@ export async function fetchOrder(user, id, transaction) {
     id: portion.id,
     isReplacement: Boolean(portion.replacementId),
     status: portion.status,
+    progress: portion.progress ?? (portion.status === 'accepted' ? 'accepted' : null),
     quantity: portion.quantity,
     totalCost: portion.totalCost,
     farmer: portion.snapshot,
@@ -441,6 +445,53 @@ export async function placeOrder(buyerId, input, parentTransaction) {
     },
   );
 }
+async function releaseReservation(portionId, transaction, returnToStock) {
+  const items = await models.OrderItem.findAll({
+    where: { portionId },
+    order: [['listingId', 'ASC']],
+    transaction,
+  });
+  for (const item of items) {
+    const row =
+      item.listingId &&
+      (await models.CropListing.findByPk(item.listingId, {
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      }));
+    if (!row || quantity(row.reservedQuantity) < quantity(item.quantity))
+      throw new AppError(409, 'সংরক্ষিত মজুতের তথ্য মিলছে না। পরে আবার চেষ্টা করুন।');
+    await row.update(
+      {
+        ...(returnToStock ? { quantity: decimalString(quantity(row.quantity) + quantity(item.quantity), 3) } : {}),
+        reservedQuantity: decimalString(
+          quantity(row.reservedQuantity) - quantity(item.quantity),
+          3,
+        ),
+        version: row.version + 1,
+      },
+      { transaction },
+    );
+  }
+}
+
+async function lockFarmerPortion(farmerId, portionId, transaction) {
+  const owned = await models.OrderPortion.findOne({
+    where: { id: portionId, farmerId },
+    attributes: ['orderId'],
+    transaction,
+  });
+  if (!owned) throw new AppError(404, 'অর্ডারের অংশটি খুঁজে পাওয়া যায়নি।');
+  const order = await models.Order.findByPk(owned.orderId, {
+    transaction,
+    lock: transaction.LOCK.UPDATE,
+  });
+  const portion = await models.OrderPortion.findOne({
+    where: { id: portionId, farmerId },
+    transaction,
+    lock: transaction.LOCK.UPDATE,
+  });
+  return { order, portion };
+}
 export async function respondToOrder(farmerId, portionId, input, parentTransaction) {
   const { decision, version } = orderDecision(input);
   if (!uuidPattern.test(portionId || ''))
@@ -448,21 +499,7 @@ export async function respondToOrder(farmerId, portionId, input, parentTransacti
   return sequelize.transaction(
     { isolationLevel: Transaction.ISOLATION_LEVELS.READ_COMMITTED, transaction: parentTransaction },
     async (transaction) => {
-      const owned = await models.OrderPortion.findOne({
-        where: { id: portionId, farmerId },
-        attributes: ['orderId'],
-        transaction,
-      });
-      if (!owned) throw new AppError(404, 'অর্ডারের অংশটি খুঁজে পাওয়া যায়নি।');
-      const order = await models.Order.findByPk(owned.orderId, {
-        transaction,
-        lock: transaction.LOCK.UPDATE,
-      });
-      const portion = await models.OrderPortion.findOne({
-        where: { id: portionId, farmerId },
-        transaction,
-        lock: transaction.LOCK.UPDATE,
-      });
+      const { order, portion } = await lockFarmerPortion(farmerId, portionId, transaction);
       if (portion.status === decision)
         return fetchOrder({ id: farmerId, role: 'farmer' }, order.id, transaction);
       if (portion.status !== 'pending' || portion.version !== version)
@@ -470,34 +507,7 @@ export async function respondToOrder(farmerId, portionId, input, parentTransacti
           409,
           'এই অংশের উত্তর ইতিমধ্যে দেওয়া হয়েছে বা তথ্য বদলেছে। সর্বশেষ অর্ডার দেখুন।',
         );
-      if (decision === 'rejected') {
-        const items = await models.OrderItem.findAll({
-          where: { portionId },
-          order: [['listingId', 'ASC']],
-          transaction,
-        });
-        for (const item of items) {
-          const row =
-            item.listingId &&
-            (await models.CropListing.findByPk(item.listingId, {
-              transaction,
-              lock: transaction.LOCK.UPDATE,
-            }));
-          if (!row || quantity(row.reservedQuantity) < quantity(item.quantity))
-            throw new AppError(409, 'সংরক্ষিত মজুতের তথ্য মিলছে না। পরে আবার চেষ্টা করুন।');
-          await row.update(
-            {
-              quantity: decimalString(quantity(row.quantity) + quantity(item.quantity), 3),
-              reservedQuantity: decimalString(
-                quantity(row.reservedQuantity) - quantity(item.quantity),
-                3,
-              ),
-              version: row.version + 1,
-            },
-            { transaction },
-          );
-        }
-      }
+      if (decision === 'rejected') await releaseReservation(portionId, transaction, true);
       await portion.update(
         { status: decision, respondedAt: new Date(), version: portion.version + 1 },
         { transaction },
@@ -527,6 +537,35 @@ export async function respondToOrder(farmerId, portionId, input, parentTransacti
         },
         { transaction },
       );
+      return fetchOrder({ id: farmerId, role: 'farmer' }, order.id, transaction);
+    },
+  );
+}
+
+export async function updatePortionProgress(farmerId, portionId, input) {
+  onlyOrderFields(input, ['progress', 'version']);
+  const { progress, version } = input;
+  if (!progressStages.slice(1).includes(progress) || !Number.isSafeInteger(version) || version < 1)
+    throw new AppError(422, 'সঠিক সরবরাহের ধাপ ও সংস্করণ দিন।');
+  if (!uuidPattern.test(portionId)) throw new AppError(404, 'অর্ডারের অংশটি খুঁজে পাওয়া যায়নি।');
+  return sequelize.transaction(
+    { isolationLevel: Transaction.ISOLATION_LEVELS.READ_COMMITTED },
+    async (transaction) => {
+      const { order, portion } = await lockFarmerPortion(farmerId, portionId, transaction);
+      if (portion.status !== 'accepted')
+        throw new AppError(409, 'শুধু গৃহীত অংশের অগ্রগতি বদলানো যায়।');
+      if (portion.progress !== progress) {
+        if (portion.version !== version || nextProgressStage(portion.progress ?? 'accepted') !== progress)
+          throw new AppError(409, 'সর্বশেষ অগ্রগতি দেখে পরবর্তী ধাপ বেছে নিন।');
+        if (progress === 'completed') await releaseReservation(portionId, transaction, false);
+        await portion.update({ progress, version: version + 1 }, { transaction });
+        await models.Notification.create({
+          recipientId: order.buyerId,
+          orderId: order.id,
+          title: 'সরবরাহের অগ্রগতি',
+          message: `${portion.snapshot.fullName} · ${order.snapshot.cropName} · ${progressLabels[progress]}।`,
+        }, { transaction });
+      }
       return fetchOrder({ id: farmerId, role: 'farmer' }, order.id, transaction);
     },
   );
