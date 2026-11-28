@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link, NavLink, Outlet, useParams, useSearchParams } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { Link, NavLink, Outlet, useParams, useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, ClipboardCheck, Users, Sprout, ListChecks, Package, Tags, ArrowUpRight, RefreshCw } from 'lucide-react';
 import AuthGate from '../components/AuthGate.jsx';
 import { useApiResource } from '../lib/resource.js';
@@ -9,6 +9,7 @@ import { formatAmount, formatDate, statusLabels, unitLabels } from '../lib/listi
 import { progressLabels } from '../../../shared/order-progress.js';
 import { bangla } from '../lib/registration.js';
 import { cropCatalog } from '../../../shared/crop-catalog.js';
+import { directoryFilters, normalizeDirectoryFilters } from '../../../shared/admin-directory-filters.js';
 import '../admin.css';
 
 const links = [
@@ -20,12 +21,9 @@ const links = [
 const names = Object.fromEntries(links.map(([key, label]) => [key, label]));
 const statuses = { ...statusLabels, ...orderLabels, fulfilled: 'পূরণ হয়েছে', open: 'চলমান',
   hidden: 'আড়াল করা', farmer: 'কৃষক', buyer: 'ক্রেতা', blocked: 'প্রবেশ বন্ধ' };
-const filters = {
-  users: ['farmer', 'buyer', 'blocked'], listings: ['active', 'inactive', 'sold_out', 'hidden'],
-  requirements: ['active', 'inactive', 'fulfilled'], orders: ['open', 'completed'],
-};
-
 export function AdminLayout() {
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
   return <AuthGate role="admin"><div className="page-container admin-layout">
     <aside className="admin-sidebar">
       <h2>অ্যাডমিন প্যানেল</h2>
@@ -34,6 +32,13 @@ export function AdminLayout() {
           <Icon size={18} aria-hidden="true" />{label}
         </NavLink>)}</nav>
     </aside>
+    <nav className="admin-compact-nav" aria-label="অ্যাডমিন বিভাগ">
+      <label>অ্যাডমিন প্যানেল
+        <select value={pathname.replace(/\/$/, '')} onChange={e => navigate(e.target.value)}>
+          {links.map(([path, label]) => <option key={path} value={path ? `/admin/${path}` : '/admin'}>{label}</option>)}
+        </select>
+      </label>
+    </nav>
     <div className="admin-main"><Outlet /></div>
   </div></AuthGate>;
 }
@@ -85,7 +90,7 @@ function Details({ row, section }) {
 
 function Directory({ section }) {
   const [params, setParams] = useSearchParams();
-  const [search, setSearch] = useState(params.get('q') || '');
+  const applied = normalizeDirectoryFilters(section, Object.fromEntries(params));
   const [busy, setBusy] = useState(false), [message, setMessage] = useState('');
   const resource = useApiResource(`admin/${section}?${params}`);
   const change = (key, value) => {
@@ -94,6 +99,35 @@ function Directory({ section }) {
     if (key !== 'page') next.delete('page');
     setParams(next);
   };
+  const [search, setSearch] = useState(applied.q || '');
+  const searchTimer = useRef(null);
+  useEffect(() => {
+    const query = params.get('q') || '';
+    setSearch(current => current.trim() === query ? current : query);
+    return () => clearTimeout(searchTimer.current);
+  }, [params]);
+
+  function applyFilter(key, value, query = search) {
+    clearTimeout(searchTimer.current);
+    const next = new URLSearchParams(applied);
+    next.delete('page');
+    if (query.trim()) next.set('q', query.trim());
+    else next.delete('q');
+    if (key !== 'q') {
+      if (value) next.set(key, value);
+      else next.delete(key);
+    }
+    if (next.toString() !== params.toString()) setParams(next, { replace: key === 'q' });
+  }
+  function queueSearch(value) {
+    clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => applyFilter('q', value, value), 300);
+  }
+  function clearFilters() {
+    clearTimeout(searchTimer.current);
+    setSearch('');
+    setParams({});
+  }
   async function toggle(row) {
     const user = section === 'users';
     const label = user ? (row.blocked ? 'প্রবেশ চালু' : 'প্রবেশ বন্ধ') : (row.hiddenByAdmin ? 'বাজারে ফেরত' : 'বাজার থেকে আড়াল');
@@ -109,12 +143,33 @@ function Directory({ section }) {
   }
   return <><header className="admin-heading"><h1>{names[section]}</h1>
     <button className="button button-secondary" onClick={resource.reload} aria-label="তালিকা হালনাগাদ"><RefreshCw size={17}/></button></header>
-    <form className="admin-controls" onSubmit={e => { e.preventDefault(); change('q', search.trim()); }}>
-      <input aria-label="তালিকায় খুঁজুন" placeholder={{ users:'নাম, ফোন বা ইমেইল', listings:'ফসল বা জেলা', requirements:'ফসল বা ঠিকানা', orders:'অর্ডার নম্বর' }[section]}
-        maxLength={100} value={search} onChange={e => setSearch(e.target.value)}/>
-      <button className="button button-primary">খুঁজুন</button>
-      <select aria-label="তালিকা বাছাই" value={params.get('filter') || ''} onChange={e => change('filter', e.target.value)}>
-        <option value="">সব দেখুন</option>{filters[section].map(v => <option key={v} value={v}>{statuses[v]}</option>)}</select>
+    <form className="admin-filter-panel" onSubmit={event => {
+      event.preventDefault();
+      applyFilter('q', search, search);
+    }}>
+      <div className="admin-filter-query">
+        <label>তালিকায় খুঁজুন
+          <input name="q" placeholder={{ users:'নাম, ফোন বা ইমেইল', listings:'ফসল বা জেলা', requirements:'ফসল বা ঠিকানা', orders:'অর্ডার নম্বর' }[section]}
+            maxLength={100} value={search} onChange={e => {
+              setSearch(e.target.value);
+              if (!e.nativeEvent.isComposing) queueSearch(e.target.value);
+            }} onCompositionStart={() => clearTimeout(searchTimer.current)}
+            onCompositionEnd={e => queueSearch(e.currentTarget.value)}/>
+        </label>
+        <button type="button" className="text-link" onClick={clearFilters}>সব মুছুন</button>
+      </div>
+      {directoryFilters[section].map(({key, label, options}) => <label key={key}>{label}
+        <select name={key} value={applied[key] || ''} onChange={e => applyFilter(key, e.target.value)}>
+          <option value="">সব</option>
+          {options.map(([value, text]) => <option key={value} value={value}>{text}</option>)}
+        </select></label>)}
+      <label>{section === 'users' ? 'নিবন্ধন' : 'তৈরি'} · তারিখ থেকে
+        <input name="from" type="date" max={applied.to || undefined} value={applied.from || ''} onChange={e => {
+          if (e.target.reportValidity()) applyFilter('from', e.target.value);
+        }}/></label>
+      <label>তারিখ পর্যন্ত<input name="to" type="date" min={applied.from || undefined} value={applied.to || ''} onChange={e => {
+        if (e.target.reportValidity()) applyFilter('to', e.target.value);
+      }}/></label>
     </form>
     {message && <p role="status">{message}</p>}
     <Resource resource={resource}>{({ records, total, page, pages }) => <>
@@ -143,7 +198,7 @@ function Directory({ section }) {
 }
 export function AdminDirectory() {
   const { section } = useParams();
-  if (!Object.hasOwn(filters, section)) return <Link to="/admin">সারসংক্ষেপে ফিরুন</Link>;
+  if (!Object.hasOwn(directoryFilters, section)) return <Link to="/admin">সারসংক্ষেপে ফিরুন</Link>;
   return <Directory key={section} section={section}/>;
 }
 

@@ -16,6 +16,7 @@ const date = (value) =>
 function AdminBuyerContent() {
   const { refresh } = useAuth();
   const [status, setStatus] = useState('pending'),
+    [business, setBusiness] = useState(''),
     [page, setPage] = useState(1),
     [revision, setRevision] = useState(0),
     [data, setData] = useState(null),
@@ -31,7 +32,7 @@ function AdminBuyerContent() {
     let active = true;
     setLoading(true);
     setError('');
-    apiRequest(`admin/buyers?status=${status}&page=${page}`)
+    apiRequest(`admin/buyers?status=${status}&page=${page}&business=${encodeURIComponent(business)}`)
       .then((result) => {
         if (active) {
           setData(result);
@@ -50,7 +51,7 @@ function AdminBuyerContent() {
     return () => {
       active = false;
     };
-  }, [status, page, revision, refresh]);
+  }, [status, business, page, revision, refresh]);
   function choose(buyer) {
     setSelected(buyer);
     setReason('');
@@ -107,6 +108,18 @@ function AdminBuyerContent() {
           <RefreshCw size={16} aria-hidden="true" /> তালিকা হালনাগাদ
         </button>
       </div>
+      <form className="admin-controls" onSubmit={e => {
+        e.preventDefault();
+        setBusiness(e.currentTarget.elements.business.value.trim());
+        setPage(1);
+        setSelected(null);
+      }}>
+        <input name="business" maxLength={100} aria-label="প্রতিষ্ঠানের নাম বা ব্যবসার ধরন" placeholder="প্রতিষ্ঠানের নাম বা ব্যবসার ধরন" />
+        <button disabled={busy} className="button button-secondary">খুঁজুন</button>
+        <button type="reset" className="text-link" onClick={() => {
+          setBusiness(''); setPage(1); setSelected(null);
+        }}>খোঁজ মুছুন</button>
+      </form>
       <nav className="review-filters" aria-label="আবেদনের অবস্থা">
         {Object.entries(labels).map(([key, label]) => (
           <button

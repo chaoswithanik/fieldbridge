@@ -74,9 +74,16 @@ export async function listBuyerApplications(query = {}) {
     pageSize = 20;
   if (!Number.isSafeInteger(page) || page < 1 || page > 100000)
     throw new AppError(422, 'পাতার নম্বর সঠিক নয়।');
+  const business = query.business ?? '';
+  if (typeof business !== 'string' || business.length > 100)
+    throw new AppError(422, 'প্রতিষ্ঠানের নাম বা ব্যবসার ধরন সংক্ষেপে লিখুন।');
+  const word = business.trim();
+  const businessWhere = word ? { [Op.or]: [
+    { businessName: { [Op.substring]: word } }, { businessType: { [Op.substring]: word } },
+  ] } : {};
   const { rows, count } = await models.BuyerProfile.findAndCountAll({
     distinct: true,
-    where: status === 'all' ? {} : { status },
+    where: { ...businessWhere, ...(status === 'all' ? {} : { status }) },
     include: [
       { model: models.User, as: 'user', required: true, where: { role: 'buyer' } },
       {
@@ -95,7 +102,7 @@ export async function listBuyerApplications(query = {}) {
   });
   const counts = {};
   for (const key of ['pending', 'approved', 'rejected'])
-    counts[key] = await models.BuyerProfile.count({ where: { status: key } });
+    counts[key] = await models.BuyerProfile.count({ where: { ...businessWhere, status: key } });
   return {
     buyers: rows.map(applicationData),
     counts,

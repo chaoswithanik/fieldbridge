@@ -4,6 +4,8 @@ import { sequelize } from '../config/database.js';
 import { AppError } from '../lib/errors.js';
 import { uuidPattern, onlyOrderFields } from '../lib/order-validation.js';
 import { cropCatalog } from '../../shared/crop-catalog.js';
+import { directoryFilters, normalizeDirectoryFilters } from '../../shared/admin-directory-filters.js';
+import { listingLocationConditions } from '../lib/location.js';
 import { fetchOrder } from './orders.js';
 
 const invalid = () => new AppError(422, 'অনুরোধের তথ্য সঠিক নয়।');
@@ -13,31 +15,51 @@ const checkId = (id) => { if (!uuidPattern.test(id)) throw missing(); };
 const includePerson = (as) => ({ model: models.User, as, attributes: ['fullName', 'phone'] });
 
 export async function directory(section, query) {
-  const { page = '1', q = '', filter = '' } = query;
-  onlyOrderFields(query, ['page', 'q', 'filter']);
-  if (typeof page !== 'string' || !/^[1-9]\d{0,4}$/.test(page) || typeof q !== 'string' || q.length > 100)
-    throw invalid();
+  const fields = directoryFilters[section];
+  onlyOrderFields(query, ['page', 'q', 'from', 'to', ...fields.map(field => field.key)]);
+  if (Object.values(query).some(value => typeof value !== 'string')) throw invalid();
+  const values = normalizeDirectoryFilters(section, query);
+  const { page = '1', q = '', filter, from, to } = values;
+  if (!/^[1-9]\d{0,4}$/.test(page) || q.length > 100) throw invalid();
+  for (const { key, options } of fields) {
+    if (values[key] && !options.some(([id]) => id === values[key])) throw invalid();
+  }
   const sources = {
-    users: [models.User, ['farmer', 'buyer', 'blocked'], ['fullName', 'phone', 'email']],
-    listings: [models.CropListing, ['active', 'inactive', 'sold_out', 'hidden'], ['cropName', 'district']],
-    requirements: [models.PurchaseRequirement, ['active', 'inactive', 'fulfilled'], ['cropName', 'deliveryAddress']],
-    orders: [models.Order, ['open', 'completed'], ['id']],
+    users: [models.User, ['fullName', 'phone', 'email']],
+    listings: [models.CropListing, ['cropName', 'district']],
+    requirements: [models.PurchaseRequirement, ['cropName', 'deliveryAddress']],
+    orders: [models.Order, ['id']],
   };
-  const [model, filters, searchFields] = sources[section];
-  if (filter && !filters.includes(filter)) throw invalid();
+  const [model, searchFields] = sources[section];
   const where = {};
   const options = {};
+  if (from || to) {
+    const startOfDay = (day) => {
+      const utc = new Date(day + 'T00:00:00Z');
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || day < '1000-01-01' || !Number.isFinite(+utc) ||
+          utc.toISOString().slice(0, 10) !== day) throw invalid();
+      return new Date(day + 'T00:00:00+06:00');
+    };
+    if (from && to && from > to) throw new AppError(422, 'শেষ তারিখ শুরুর তারিখের আগে হতে পারে না।');
+    where.createdAt = {};
+    if (from) where.createdAt[Op.gte] = startOfDay(from);
+    if (to) where.createdAt[Op.lt] = new Date(+startOfDay(to) + 86400000);
+  }
+  if (values.crop) where.cropId = values.crop;
+  if (values.unit) where.unit = values.unit;
+  if (values.district) where[Op.and] = listingLocationConditions({ district: values.district });
+  if (values.visibility) where.hiddenByAdmin = values.visibility === 'hidden';
+  if (values.mode) where.mode = values.mode;
   if (q.trim()) where[Op.or] = searchFields.map((field) => ({ [field]: { [Op.substring]: q.trim() } }));
   if (section === 'users') {
     where.role = ['buyer', 'farmer'].includes(filter) ? filter : { [Op.in]: ['farmer', 'buyer'] };
-    if (filter === 'blocked') where.blocked = true;
+    if (values.access) where.blocked = values.access === 'blocked';
     options.attributes = ['id', 'role', 'fullName', 'phone', 'email', 'blocked', 'createdAt'];
   } else if (section === 'orders') {
     if (filter) where.completedAt = filter === 'completed' ? { [Op.ne]: null } : null;
     options.attributes = ['id'];
   } else {
-    if (filter === 'hidden') where.hiddenByAdmin = true;
-    else if (filter) where.status = filter;
+    if (filter) where.status = filter;
     options.include = [includePerson(section === 'listings' ? 'farmer' : 'buyer')];
 
   }

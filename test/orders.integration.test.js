@@ -798,6 +798,16 @@ if (process.env.AUTH_INTEGRATION !== '1') {
       const result = await admin(section);
       assert.equal(result.status, 200, JSON.stringify(result.data));
     }
+    const filterPath = 'listings?' + new URLSearchParams({
+      q: listing.cropName, filter: 'active', crop: 'potato', unit: 'kg', district: listing.district, visibility: 'visible',
+    });
+    assert.equal((await admin(filterPath)).data.records[0].id, listing.id);
+    assert.equal((await admin(filterPath + '&to=2000-01-01')).data.total, 0);
+    assert.equal((await admin('listings?from=2026-11-02&to=2026-11-01')).status, 422);
+    assert.equal((await admin('users?from=2026-02-30')).status, 422);
+    assert.equal((await admin('orders?mode=invalid')).status, 422);
+    assert.equal((await admin('users?crop=potato')).status, 422);
+    assert.equal((await admin('requirements?crop=potato&unit=kg&q=' + encodeURIComponent(listing.cropName))).data.total, 1);
     const report = await admin('overview?days=7');
     assert.ok(report.data.totals.farmers >= 3);
     assert.equal(report.data.report.days, 7);

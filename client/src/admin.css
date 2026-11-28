@@ -45,10 +45,51 @@
 .admin-crops { margin:.5rem 0 1rem; }
 .admin-crops label { display:flex; align-items:center; gap:.4rem; padding:.3rem .6rem; background:var(--color-surface-container-low); border-radius:.4rem; }
 .admin-state { padding:1.25rem 0; }
-@media (max-width:800px) {
-  .admin-layout { grid-template-columns:minmax(0,1fr); gap:1rem; padding-block:1rem 2rem; }
-  .admin-sidebar { padding:.6rem; }
-  .admin-sidebar nav { display:flex; flex-wrap:wrap; }
-  .admin-sidebar a { padding:.45rem .55rem; }
-  .admin-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); }
+
+.admin-sidebar {
+  position: fixed;
+  top: 7.75rem;
+  width: 14rem;
+  z-index: 10;
+}
+.admin-main { grid-column: 2; }
+.admin-compact-nav { display: none; }
+.admin-filter-panel {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 10.5rem), 1fr));
+  gap: .75rem 1rem;
+  padding: 1rem;
+  background: var(--color-surface-container-lowest);
+  border: 1px solid var(--color-outline-variant);
+  border-radius: .875rem;
+}
+.admin-filter-panel label { display: grid; gap: .2rem; font-size: .875rem; }
+.admin-filter-panel select, .admin-filter-panel input { min-width: 0; width: 100%; }
+.admin-filter-query {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: .75rem;
+}
+.admin-filter-query button { min-height: 44px; white-space: nowrap; }
+@media (min-width:801px) and (min-height:641px) {
+  .app-shell:has(.admin-layout) .site-footer .page-container {
+    padding-inline-start: calc(14rem + clamp(1rem,3vw,2.5rem));
+  }
+}
+@media (max-width:800px), (max-height:640px) {
+  .admin-layout { grid-template-columns: minmax(0,1fr); gap: 1rem; padding-block: 1rem 2rem; }
+  .admin-sidebar { display: none; }
+  .admin-main { grid-column: 1; }
+  .admin-compact-nav {
+    display: block; position: fixed; z-index: 20; inset: auto 0 0;
+    background: var(--color-surface-container-lowest); border-top: 1px solid var(--color-outline-variant);
+    padding: .45rem 1rem calc(.45rem + env(safe-area-inset-bottom));
+  }
+  .admin-compact-nav label { display: flex; justify-content: center; gap: 1rem; align-items: center; }
+  .admin-compact-nav select { max-width: 65%; border: 1px solid var(--color-outline); border-radius: .5rem; padding: .5rem; }
+  html:has(.admin-layout) { scroll-padding-bottom: calc(4rem + env(safe-area-inset-bottom)); }
+  .app-shell:has(.admin-layout) { padding-bottom: calc(4rem + env(safe-area-inset-bottom)); }
+  .admin-metrics { grid-template-columns: repeat(2,minmax(0,1fr)); }
 }
